@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beautiful HTML Page</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f7fa;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+        
+        header {
+            background-color: #000;
+            color: white;
+            padding:20px;
+            text-align: center;
+            font-size: 30px;
+            font-weight: bold;
+            text-transform: uppercase;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+    .app-list {
+      max-width: 500px;
+      margin: 20px auto;
+      background: #fff;
+      padding: 20px;
+    }
+
+    .app-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 15px;
+    }
+
+    .app-info {
+      display: flex;
+      align-items: center;
+    }
+
+    .app-icon {
+      width: 50px;
+      height: 50px;
+      border-radius: 10px;
+      margin-right: 15px;
+      background-color: red;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      text-transform: uppercase;
+    }
+
+    .app-details {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .app-title {
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .download-btn {
+      background-color: #28a745;
+      color: #fff;
+      padding: 8px 15px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .download-btn:hover {
+      background-color: #218838;
+    }
+        
+
+        footer {
+            background-color: #333;
+            color: white;
+            text-align: center;
+            padding: 0px;
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+        }
+
+        footer a {
+            color: #ddd;
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    Welcome to My Pages
+</header>
+    <div class="app-list">
+        <h1>All PDF</h1>
+        <div id="taskList"></div>
+        <div class="loader" id="loader">Loading tasks...</div>
+    </div>
+
+<footer>
+    <p>&copy; 2024 My Beautiful Page | <a href="#privacy">Privacy Policy</a> | <a href="#terms">Terms of Service</a></p>
+</footer>
+
+
+<script type="text/javascript" charset="utf-8">
+      
+      const taskList = document.getElementById('taskList');
+const loader = document.getElementById('loader');
+
+// ** Read - Fetch and display tasks (simulating API request) **
+function getTasks() {
+    loader.style.display = 'block'; // Show loader while loading
+    fetch('https://sheetdb.io/api/v1/02d3kamfdpfrt') // Simulating with placeholder API
+        .then(response => response.json())
+        .then(data => {
+            loader.style.display = 'none'; // Hide loader after data is loaded
+            renderTasks(data);
+        })
+        .catch(error => {
+            loader.textContent = 'Failed to load tasks.';
+            console.error('Error fetching tasks:', error);
+        });
+}
+
+// ** Render - Display all tasks in the list **
+function renderTasks(tasks) {
+    taskList.innerHTML = ''; // Clear existing tasks
+    tasks.forEach(task => {
+        const li = document.createElement('div');
+        li.innerHTML = `
+            
+              
+              <div class="app-item">
+      <div class="app-info">
+        <div class="app-icon">pdf</div>
+        <div class="app-details"><span class="app-title">
+          ${task.name}
+        </span></div>
+      </div>
+      <a class="download-btn" href="${task.url}">Download</a>
+    </div>
+        `;
+        taskList.appendChild(li);
+    });
+}
+
+// ** Initial load **
+getTasks();
+
+    </script>
+</body>
+</html>
