@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Todo List with Product Name and Price</title>
+        
+    </head>
+    <body>
+        <h1>Todo List with Product Name and Price</h1>
+        <div class="todo-container">
+          <input type="text" id="product-name" placeholder="Product Name">
+          <input type="text" id="product-price" placeholder="Product Price" min="0"> 
+          <button onclick="addProduct()">Add Product</button>
+        </div>
+        <div id="todo-list"><!-- List of Products will appear here -->
+        </div>
+        <script>
+        // Load the products from localStorage when the page loads
+      
+       function getTasks() {
+   
+    fetch('https://raw.githubusercontent.com/terokhada1/m1/refs/heads/main/io.json') // Simulating with placeholder API
+        .then(response => response.json())
+        .then(data => {
+          
+            loadProducts(data);
+        })
+        .catch(error => {
+            loader.textContent = 'Failed to load tasks.';
+            console.error('Error fetching tasks:', error);
+        });
+       
+}
+//===============================================
+
+function loadProducts(produ) {
+            const products =produ;
+          //  console.log(products)
+            const todoListDiv = document.getElementById("todo-list");
+            todoListDiv.innerHTML = ""; // Clear current list
+
+            products.forEach((product, index) => {
+                const productDiv = document.createElement("div");
+                productDiv.classList.add("todo-item");
+                productDiv.innerHTML = `${product.name} - ${product.url} <button onclick="deleteProduct(${index})">Delete</button>`;
+                todoListDiv.appendChild(productDiv);
+            });
+        }
+        
+//console.log(getProductsFromStorage())
+
+        function addProduct() {
+            const name = document.getElementById("product-name").value;
+            const url = document.getElementById("product-price").value;
+
+            if (name && url) {
+                const product = { name, url };
+ fetch('https://raw.githubusercontent.com/terokhada1/m1/refs/heads/main/io.json').then(response => response.json()).then(data => {
+          let products = data;
+                products.push(product);
+           
+                saveProductsToStorage(products);
+                
+            document.getElementById("product-name").value = "";
+            document.getElementById("product-price").value = "";
+            loadProducts(data.data);
+  
+   
+ })
+        .catch(error => {
+            loader.textContent = 'Failed to load tasks.';
+            console.error('Error fetching tasks:', error);
+        });
+        
+        
+                
+            
+            } else {
+                alert("Please enter both product name and price.");
+            }
+        }
+
+        
+
+        // Function to delete a product
+        function deleteProduct(index) {
+          fetch('https://raw.githubusercontent.com/terokhada1/m1/refs/heads/main/io.json').then(response => response.json()).then(data => {
+            let products = data;
+            products.splice(index, 1);
+            saveProductsToStorage(products);
+            loadProducts();
+             
+ });
+        }
+
+        // Clear input fields
+      function saveProductsToStorage(products) {
+
+            console.log(products)
+          
+        
+        
+  const GITHUB_TOKEN = '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';
+  const OWNER = 'terokhada1';
+  const REPO = 'm1';
+  const FILE_PATH = 'io.json';
+  const COMMIT_MESSAGE = 'Your commit message';
+  const FILE_CONTENT = btoa(JSON.stringify(products)); // Base64 encode https://github.com/terokhada1/m1/blob/main/io.json content
+
+  async function updateFile() {
+    const url = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${FILE_PATH}`;
+
+    try {
+      // Step 1: Get the SHA of the existing file
+      const fileResponse = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${GITHUB_TOKEN}`
+        }
+      });
+      const fileData = await fileResponse.json();
+      const fileSHA = fileData.sha;
+
+      // Step 2: Update the file with new content
+      const updateResponse = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${GITHUB_TOKEN}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          message: COMMIT_MESSAGE,
+          content: FILE_CONTENT,
+          sha: fileSHA
+        })
+      });
+
+      const updateData = await updateResponse.json();
+      console.log('File updated:', updateData);
+      alert('File successfully updated!');
+
+    } catch (error) {
+      console.error('Error updating file:', error);
+    }
+  }
+  updateFile()
+}
+         
+getTasks();
+    </script>
+    </body>
+</html>
