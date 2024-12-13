@@ -170,7 +170,7 @@ const loader = document.getElementById('loader');
 // ** Read - Fetch and display tasks (simulating API request) **
 function getTasks() {
     loader.style.display = 'block'; // Show loader while loading
-    fetch('https://sheetdb.io/api/v1/02d3kamfdpfrt') // Simulating with placeholder API
+    fetch('https://raw.githubusercontent.com/terokhada1/m1/refs/heads/main/io.json') // Simulating with placeholder API
         .then(response => response.json())
         .then(data => {
             loader.style.display = 'none'; // Hide loader after data is loaded
