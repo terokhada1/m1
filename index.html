@@ -1,11 +1,10 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HSC'26 SUGGESTION</title>
-    <style>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>HSC'26 SUGGESTION</title>
+        <style>
         body {
             font-family: 'Arial', sans-serif;
             background-color: #fff;
@@ -13,13 +12,52 @@
             padding: 0;
             color: #333;
         }
+                .tabs {
+            overflow: auto;
+            white-space: nowrap;
+            display: flex;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .tab-button {
+            background-color: #e0e0e0;
+            border: none;
+            padding: 10px 20px;
+            margin: 0 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s;
+        }
+        .tab-button.active {
+            background-color: #333;
+            color: #fff;
+        }
+        /* Content Section */
+        .content-section {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        h2 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+
+
+        .hidden {
+            display: none;
+        }
          .container {
-           
+           height: 180px;
             text-align: center;
             padding: 50px 20px;
-            background: url('https://terokhada1.github.io/m1/images%20(4).jpeg') no-repeat center center/cover;
+            background: url('https://raw.githubusercontent.com/terokhada1/m1/refs/heads/main/images%20(4).jpeg') no-repeat center center/cover;
             color: #000;
-            box-shadow:inset 0 -250px 500px white;
+            box-shadow:inset 0 -180px 500px white;
         }
         .quote {
             background-color: #000;
@@ -35,7 +73,7 @@
             margin: 10px 0;
         }
         .container p {
-          margin-top: 120px;
+          margin-top: 100px;
             font-size: 18px;
             
         }
@@ -136,77 +174,110 @@
             text-decoration: underline;
         }
     </style>
-</head>
-<body>
-
-    <div class="header">
-        <div class="header-title">HSC'26</div>
-        <img class="search-icon" src="search-icon.png" alt="Search Icon">
-    </div>
-    
-     <div class="container">
-        <div class="quote">Man must rise above the Earth</div>
-
-        <p>A 'good landing' is one from which you can walk away</p>
-        
-    </div>
-    
-    <div class="app-list">
-        <h1>All PDF</h1>
-        <div id="taskList"></div>
-        <div class="loader" id="loader">Loading tasks...</div>
-    </div>
-
-<footer>
-    <p>&copy; 2024 My Beautiful Page | <a href="#privacy">Privacy Policy</a> | <a href="#terms">Terms of Service</a></p>
-</footer>
-
-
-<script type="text/javascript" charset="utf-8">
+    </head>
+    <body>
+        <div class="header">
+            <div class="header-title">
+                HSC'26
+            </div> <img class="search-icon" src="search-icon.png" alt="Search Icon">
+        </div>
+        <div class="container">
+            <div class="quote">
+                Man must rise above the Earth
+            </div>
+            <p>ডাউনলোড বাটন এর উপর ক্লিক করলেই ডাউনলোড হয়ে যাবে</p>
+        </div>
+        <div class="tabs">
+          <button class="tab-button active" onclick="showTab('bangla')">Bangla</button> <button class="tab-button" onclick="showTab('maths')">Math</button> <button class="tab-button" onclick="showTab('chemistry')">Chemistry</button> <button class="tab-button" onclick="showTab('biology')">Biology</button> <button class="tab-button" onclick="showTab('physics')">Physic</button>
+        </div> <!-- Content Sections -->
+        <div id="bangla" class="content-section">
+            <div class="app-list">
+                <div id="taskList1"></div>
+                <div class="loader" id="loader">
+                    Loading tasks...
+                </div>
+            </div>
+        </div>
+        <div id="maths" class="content-section hidden">
+            <div class="app-list">
+                <div id="taskList2"></div>
+            </div>
+        </div>
+        <div id="chemistry" class="content-section hidden">
+            <div class="app-list">
+                <div id="taskList3"></div>
+            </div>
+        </div>
+        <div id="biology" class="content-section hidden">
+            <div class="app-list">
+                <div id="taskList4"></div>
+            </div>
+        </div>
+        <div id="physics" class="content-section hidden">
+            <div class="app-list">
+                <div id="taskList5"></div>
+            </div>
+        </div>
+        <footer>
+            <p>© 2024 My Beautiful Page | <a href="#privacy">Privacy Policy</a> | <a href="#terms">Terms of Service</a></p>
+        </footer>
+        <script type="text/javascript" charset="utf-8">
       
-      const taskList = document.getElementById('taskList');
+const taskList1 = document.getElementById('taskList1');
+const taskList2 = document.getElementById('taskList2');
+const taskList3 = document.getElementById('taskList3');
+const taskList5 = document.getElementById('taskList5');
 const loader = document.getElementById('loader');
 
-// ** Read - Fetch and display tasks (simulating API request) **
-function getTasks() {
-    loader.style.display = 'block'; // Show loader while loading
-    fetch('https://raw.githubusercontent.com/terokhada1/m1/refs/heads/main/io.json') // Simulating with placeholder API
-        .then(response => response.json())
-        .then(data => {
-            loader.style.display = 'none'; // Hide loader after data is loaded
-            renderTasks(data);
-        })
-        .catch(error => {
-            loader.textContent = 'Failed to load tasks.';
-            console.error('Error fetching tasks:', error);
-        });
+
+function showTab(tabId) {
+
+    const sections = document.querySelectorAll('.content-section');
+    sections.forEach(section => section.classList.add('hidden'));
+
+    document.getElementById(tabId).classList.remove('hidden');
+
+    const buttons = document.querySelectorAll('.tab-button');
+    buttons.forEach(button => button.classList.remove('active'));
+
+    event.target.classList.add('active');
 }
 
-// ** Render - Display all tasks in the list **
-function renderTasks(tasks) {
-    taskList.innerHTML = ''; // Clear existing tasks
-    tasks.forEach(task => {
-        const li = document.createElement('div');
-        li.innerHTML = `
-            
-              
-              <div class="app-item">
-      <div class="app-info">
-        <div class="app-icon">pdf</div>
-        <div class="app-details"><span class="app-title">
-          ${task.name}
-        </span></div>
-      </div>
-      <a class="download-btn" href="${task.url}">Download</a>
-    </div>
-        `;
-        taskList.appendChild(li);
+
+function getTasks() {
+    loader.style.display = 'block'; 
+
+    fetch('https://terokhada1.github.io/m1/al.json')
+    .then(response => response.json())
+        .then(data => {
+        loader.style.display = 'none';
+        console.log(data)
+        renderTasks(data.sub1, taskList1);
+        renderTasks(data.sub2, taskList2);
+        renderTasks(data.sub3, taskList3);
+        renderTasks(data.sub4, taskList4);
+        renderTasks(data.sub5, taskList5);
+    })
+     .catch (error => {
+        loader.textContent = 'Failed to load tasks.';
+        console.error('Error fetching tasks:', error);
     });
 }
 
-// ** Initial load **
+
+function renderTasks(tasks, id) {
+    console.log(tasks)
+    id.innerHTML = '';
+    tasks.forEach(task => {
+        const li = document.createElement('div');
+        li.innerHTML = `<div class="app-item"><div class="app-info"><div class="app-icon">pdf</div><div class="app-details"><span class="app-title">${task.name}</span></div></div><a class="download-btn" href="${task.url}">Download</a></div>`;
+        id.appendChild(li);
+    });
+}
+
+
 getTasks();
 
     </script>
-</body>
+    </body>
 </html>
