@@ -16,8 +16,9 @@
             overflow-x: auto;
             white-space: nowrap;
             display: flex;
-            justify-content: center;
+            
             margin: 20px 0;
+            justify-content: flex-start;
         }
         .tab-button {
             background-color: #e0e0e0;
@@ -175,9 +176,11 @@
             </div>
             <p>ডাউনলোড বাটন এর উপর ক্লিক করলেই ডাউনলোড হয়ে যাবে</p>
         </div>
+      <div  class="content-section">
         <div class="tabs">
           <button class="tab-button active" onclick="showTab('bangla')">Bangla</button> <button class="tab-button" onclick="showTab('maths')">Math</button> <button class="tab-button" onclick="showTab('chemistry')">Chemistry</button> <button class="tab-button" onclick="showTab('biology')">Biology</button> <button class="tab-button" onclick="showTab('physics')">Physic</button>
-        </div> <!-- Content Sections -->
+        </div>
+        </div><!-- Content Sections -->
         <div id="bangla" class="content-section">
             <div class="app-list">
                 <div id="taskList1"></div>
