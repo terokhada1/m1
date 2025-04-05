@@ -67,7 +67,8 @@
     "paymentInfo": {
       "paymentNumber": "",
       "transactionId": ""
-    }
+    },
+    "verified": true
   },
   {
     "teamInfo": {
