@@ -1,4 +1,4 @@
-# Registrations
+# Registration Data
 
 ```json
 [
@@ -52,6 +52,39 @@
       },
       {
         "name": "ggh",
+        "uid": ""
+      },
+      {
+        "name": "",
+        "uid": ""
+      },
+      {
+        "name": "",
+        "uid": ""
+      }
+    ],
+    "paymentInfo": {
+      "paymentNumber": "",
+      "transactionId": ""
+    }
+  },
+  {
+    "teamInfo": {
+      "leaderWhatsApp": "faga",
+      "leaderEmail": "serialkillerbongo@gmail.com",
+      "teamName": "gshhs"
+    },
+    "players": [
+      {
+        "name": "",
+        "uid": ""
+      },
+      {
+        "name": "",
+        "uid": ""
+      },
+      {
+        "name": "",
         "uid": ""
       },
       {
