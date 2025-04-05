@@ -1,37 +1,39 @@
-# Registration Data
+# Registrations
 
 ```json
-{
-  "teamInfo": {
-    "leaderWhatsApp": "",
-    "leaderEmail": "",
-    "teamName": ""
-  },
-  "players": [
-    {
-      "name": "",
-      "uid": ""
+[
+  {
+    "teamInfo": {
+      "leaderWhatsApp": "",
+      "leaderEmail": "",
+      "teamName": ""
     },
-    {
-      "name": "",
-      "uid": ""
-    },
-    {
-      "name": "",
-      "uid": ""
-    },
-    {
-      "name": "",
-      "uid": ""
-    },
-    {
-      "name": "",
-      "uid": ""
+    "players": [
+      {
+        "name": "",
+        "uid": ""
+      },
+      {
+        "name": "",
+        "uid": ""
+      },
+      {
+        "name": "ggh",
+        "uid": ""
+      },
+      {
+        "name": "",
+        "uid": ""
+      },
+      {
+        "name": "",
+        "uid": ""
+      }
+    ],
+    "paymentInfo": {
+      "paymentNumber": "",
+      "transactionId": ""
     }
-  ],
-  "paymentInfo": {
-    "paymentNumber": "",
-    "transactionId": ""
   }
-}
+]
 ```
