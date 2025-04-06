@@ -70,7 +70,7 @@
       "transactionId": ""
     },
     "verified": true,
-    "status": "Approved"
+    "status": "Rejected"
   },
   {
     "teamInfo": {
