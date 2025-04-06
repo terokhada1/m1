@@ -34,7 +34,8 @@
       "paymentNumber": "",
       "transactionId": ""
     },
-    "verified": true
+    "verified": true,
+    "status": "Pending"
   },
   {
     "teamInfo": {
@@ -68,7 +69,8 @@
       "paymentNumber": "",
       "transactionId": ""
     },
-    "verified": true
+    "verified": true,
+    "status": "Approved"
   },
   {
     "teamInfo": {
@@ -102,7 +104,8 @@
       "paymentNumber": "",
       "transactionId": ""
     },
-    "verified": true
+    "verified": true,
+    "status": "Pending"
   }
 ]
 ```
