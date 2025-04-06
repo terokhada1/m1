@@ -105,7 +105,7 @@
       "transactionId": ""
     },
     "verified": true,
-    "status": "Pending"
+    "status": "Approved"
   }
 ]
 ```
