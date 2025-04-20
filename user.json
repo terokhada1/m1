@@ -6,7 +6,7 @@
       "email": "aquarisezido@gmail.com",
       "profile": {
         "name": "John",
-        "age": 28,
+        "age": 28
       }
     },
     {
@@ -15,9 +15,11 @@
       "email": "serialkillerbongo@gmail.com",
       "profile": {
         "name": "Johny",
-        "age": 28,
+        "age": 28
       }
     }
   ],
-  "metadata": {"total_users": 2}
+  "metadata": {
+    "total_users": 2
+  }
 }
