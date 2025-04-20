@@ -1,0 +1,23 @@
+{
+  "users": [
+    {
+      "id": 12345,
+      "password": "1111",
+      "email": "aquarisezido@gmail.com",
+      "profile": {
+        "name": "John",
+        "age": 28,
+      }
+    },
+    {
+      "id": 12348,
+      "password": "0000",
+      "email": "serialkillerbongo@gmail.com",
+      "profile": {
+        "name": "Johny",
+        "age": 28,
+      }
+    }
+  ],
+  "metadata": {"total_users": 2}
+}
