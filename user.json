@@ -1,34 +1,9 @@
-{
-  "users": [
-    {
-    
-      "password": "asdfghjk",
-      "email": "aquarisezido@gmail.com",
-      "profile": {
-        "name": "John"
-      
-      }
-    },
-    {
-  
-      "password": "asdfghjk",
-      "email": "serialkillerbongo@gmail.com",
-      "profile": {
-        "name": "Johny"
-      
-      }
-    },
-    {
-      "id": 1745126589133,
-      "password": "asdfg223",
-      "email": "oko61120@gmail.com",
-      "profile": {
-        "name": "bongo",
-      
-      }
+[
+  {
+    "password": "asdfghjk",
+    "email": "serialkillerbongo@gmail.com",
+    "profile": {
+      "name": "gdghshshzhz"
     }
-  ],
-  "metadata": {
-    "total_users": 3
   }
-}
+]
