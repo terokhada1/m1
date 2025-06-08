@@ -1,21 +1,21 @@
 {
   "users": [
     {
-      "id": 12345,
+    
       "password": "asdfghjk",
       "email": "aquarisezido@gmail.com",
       "profile": {
-        "name": "John",
-        "age": 28
+        "name": "John"
+      
       }
     },
     {
-      "id": 12348,
+  
       "password": "asdfghjk",
       "email": "serialkillerbongo@gmail.com",
       "profile": {
-        "name": "Johny",
-        "age": 28
+        "name": "Johny"
+      
       }
     },
     {
@@ -24,7 +24,7 @@
       "email": "oko61120@gmail.com",
       "profile": {
         "name": "bongo",
-        "age": 18
+      
       }
     }
   ],
