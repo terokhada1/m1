@@ -1,231 +1,176 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>প্রো ভয়েস ও ভিডিও রুম</title>
+    <title>Group Stranger Chat</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0f172a; color: white; display: flex; flex-direction: column; align-items: center; padding: 15px; margin: 0; }
-        .container { width: 100%; max-width: 600px; background: #1e293b; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); text-align: center; margin-top: 20px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; color: white; margin: 0; padding: 20px; }
+        .container { max-width: 1000px; margin: auto; }
         
-        #video-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 15px; }
-        video { width: 100%; border-radius: 12px; background: #000; object-fit: cover; height: 180px; border: 2px solid #334155; transition: 0.3s; }
-        #localVideo { border-color: #0ea5e9; transform: scaleX(-1); } /* মিরর ইফেক্ট */
+        /* Video Grid Logic */
+        #video-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+            gap: 15px; 
+            margin-bottom: 20px; 
+        }
+        .video-wrapper { position: relative; background: #000; border-radius: 10px; overflow: hidden; aspect-ratio: 4/3; }
+        video { width: 100%; height: 100%; object-fit: cover; }
+        .label { position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 4px; font-size: 12px; }
 
-        input { width: 80%; padding: 12px; margin-bottom: 15px; border-radius: 10px; border: none; background: #334155; color: white; font-size: 16px; outline: none; text-align: center; }
+        #chatSection { background: #252525; border-radius: 10px; height: 300px; display: flex; flex-direction: column; }
+        #messages { flex: 1; overflow-y: auto; padding: 15px; font-size: 14px; }
+        .controls { margin-top: 20px; display: flex; gap: 10px; justify-content: center; }
         
-        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        button { padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 14px; color: white; display: flex; align-items: center; justify-content: center; gap: 5px; }
-        
-        .btn-join { background: #0ea5e9; width: 100%; font-size: 16px; margin-top: 10px; }
-        .btn-tool { background: #475569; }
-        .btn-danger { background: #ef4444; grid-column: span 2; margin-top: 10px; }
-        .active-tool { background: #0ea5e9; box-shadow: 0 0 10px #0ea5e9; }
-
-        #user-list { text-align: left; background: #0f172a; padding: 10px; border-radius: 10px; margin-top: 15px; font-size: 14px; color: #94a3b8; }
-        .status-dot { height: 8px; width: 8px; background-color: #22c55e; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        button { padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        .btn-start { background: #0084ff; color: white; }
+        .btn-next { background: #f02849; color: white; }
+        .btn-toggle { background: #444; color: white; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2 style="color: #0ea5e9; margin-bottom: 10px;">BongoCall 📞</h2>
-    
-    <div id="setup-screen">
-        <input type="text" id="userName" placeholder="আপনার নাম লিখুন">
-        <input type="text" id="roomInput" placeholder="রুমের নাম (যেমন: আদিল-১)">
-        <button class="btn-join" onclick="joinRoom()">রুমে প্রবেশ করুন</button>
+    <h2>Random Group Video Chat</h2>
+    <div id="callStatus">Status: Ready</div>
+
+    <div id="video-grid">
+        <div class="video-wrapper">
+            <video id="localVideo" autoplay muted playsinline></video>
+            <div class="label">You</div>
+        </div>
     </div>
 
-    <div id="call-screen" style="display: none;">
-        <div id="video-grid">
-            <video id="localVideo" autoplay muted playsinline></video>
+    <div id="chatSection">
+        <div id="messages"></div>
+        <div style="display:flex; padding: 10px;">
+            <input type="text" id="chatInput" style="flex:1; padding: 8px;" placeholder="Type message...">
+            <button onclick="sendGroupMsg()">Send</button>
         </div>
+    </div>
 
-        <div id="user-list">
-            <span class="status-dot"></span> অংশগ্রহণকারী: <span id="user-count">১</span> জন
-        </div>
-
-        <div class="controls">
-            <button id="muteBtn" class="btn-tool" onclick="toggleMute()">🎤 মাইক চালু</button>
-            <button id="camBtn" class="btn-tool" onclick="toggleCamera()">📷 ক্যামেরা বন্ধ</button>
-            <button id="speakerBtn" class="btn-tool" onclick="toggleSpeaker()">🔊 স্পিকার চালু</button>
-            <button class="btn-tool" onclick="location.reload()">🔄 রিফ্রেশ</button>
-            <button class="btn-danger" onclick="leaveRoom()">❌ কল শেষ করুন</button>
-        </div>
+    <div class="controls">
+        <button id="startBtn" class="btn-start" onclick="joinRandomGroup()">Join Random Group</button>
+        <button class="btn-next" onclick="location.reload()">Leave/Next</button>
+        <button class="btn-toggle" onclick="toggleCam()">Toggle Cam</button>
     </div>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getDatabase, ref, set, onValue, push, remove, onDisconnect, onChildRemoved } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
+import { getDatabase, ref, set, onValue, push, get, onChildAdded, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
-// ফায়ারবেস কনফিগারেশন (আপনার ডাটাবেস সিকিউর রাখুন)
 const firebaseConfig = {
+    // ... PASTE YOUR CONFIG HERE ...
     apiKey: "AIzaSyDQDrOlYu4GFuba1v1PJGlyLSIEm6Li6No",
     authDomain: "bongocall-cad70.firebaseapp.com",
     databaseURL: "https://bongocall-cad70-default-rtdb.asia-southeast1.firebasedatabase.app",
     projectId: "bongocall-cad70",
-    storageBucket: "bongocall-cad70.firebasestorage.app",
-    messagingSenderId: "642949206020",
-    appId: "1:642949206020:web:7329857025880de0446551"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-const myId = 'u-' + Math.floor(Math.random() * 10000);
+const userId = 'user-' + Math.floor(Math.random() * 100000);
+let localStream, currentRoomId;
+const peers = {}; // Holds RTCPeerConnection for each person in room
 
-let myStream, currentRoom, peers = {}, isCamOn = false, isMuted = false;
+const iceServers = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
 
-const servers = { 
-    iceServers: [
-        { urls: ["stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19302"] }
-    ] 
+window.joinRandomGroup = async () => {
+    document.getElementById("startBtn").disabled = true;
+    
+    // 1. Get Camera
+    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+    document.getElementById("localVideo").srcObject = localStream;
+
+    // 2. Find or Create Room (Max 4 people)
+    const roomsRef = ref(db, 'rooms');
+    const snapshot = await get(roomsRef);
+    const rooms = snapshot.val() || {};
+    
+    currentRoomId = Object.keys(rooms).find(id => Object.keys(rooms[id].users || {}).length < 4) 
+                   || 'room-' + Math.floor(Math.random() * 9999);
+
+    // 3. Register self in room
+    const userRef = ref(db, `rooms/${currentRoomId}/users/${userId}`);
+    set(userRef, { id: userId, joinedAt: Date.now() });
+    onDisconnect(userRef).remove();
+
+    listenForOthers();
 };
 
-window.joinRoom = async () => {
-    const room = document.getElementById("roomInput").value.trim().toLowerCase();
-    const name = document.getElementById("userName").value.trim() || "অজানা";
-    if (!room) return alert("রুমের নাম দিন");
-
-    currentRoom = room;
-
-    try {
-        myStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
-        document.getElementById("localVideo").srcObject = myStream;
-        
-        // ডিফল্টভাবে ভিডিও অফ রাখা
-        myStream.getVideoTracks().forEach(t => t.enabled = false);
-
-        document.getElementById("setup-screen").style.display = "none";
-        document.getElementById("call-screen").style.display = "block";
-
-        const myRef = ref(db, `rooms/${currentRoom}/users/${myId}`);
-        set(myRef, { id: myId, name: name, joinedAt: Date.now() });
-        onDisconnect(myRef).remove();
-
-        // ইউজার লিস্ট লিসেনার
-        onValue(ref(db, `rooms/${currentRoom}/users`), snap => {
-            const users = snap.val() || {};
-            document.getElementById("user-count").innerText = Object.keys(users).length;
-            Object.keys(users).forEach(uid => {
-                if (uid !== myId && !peers[uid]) {
-                    const isCaller = users[uid].joinedAt > users[myId].joinedAt;
-                    setupPeer(uid, isCaller);
-                }
-            });
-        });
-
-        // ইউজার লিভ করলে ভিডিও রিমুভ করা
-        onChildRemoved(ref(db, `rooms/${currentRoom}/users`), snap => {
-            const uid = snap.key;
-            if (peers[uid]) {
-                peers[uid].close();
-                delete peers[uid];
-                const videoEl = document.getElementById(`vid-${uid}`);
-                if (videoEl) videoEl.remove();
-            }
-        });
-
-        listenForSignaling();
-    } catch (err) {
-        alert("ক্যামেরা বা মাইক পারমিশন প্রয়োজন!");
-        console.error(err);
-    }
-};
-
-async function setupPeer(targetId, isCaller) {
-    const pc = new RTCPeerConnection(servers);
-    peers[targetId] = pc;
-
-    myStream.getTracks().forEach(track => pc.addTrack(track, myStream));
-
-    pc.ontrack = (event) => {
-        let v = document.getElementById(`vid-${targetId}`);
-        if (!v) {
-            v = document.createElement("video");
-            v.id = `vid-${targetId}`;
-            v.autoplay = true;
-            v.playsinline = true;
-            document.getElementById("video-grid").appendChild(v);
+function listenForOthers() {
+    const othersRef = ref(db, `rooms/${currentRoomId}/users`);
+    onChildAdded(othersRef, (snapshot) => {
+        const strangerId = snapshot.key;
+        if (strangerId !== userId) {
+            initiatePeerConnection(strangerId, true);
         }
-        v.srcObject = event.streams[0];
+    });
+
+    // Listen for signaling data
+    onChildAdded(ref(db, `rooms/${currentRoomId}/signals/${userId}`), async (snapshot) => {
+        const { from, type, sdp, candidate } = snapshot.val();
+        if (!peers[from]) initiatePeerConnection(from, false);
+
+        if (type === 'offer') {
+            await peers[from].setRemoteDescription(new RTCSessionDescription({type, sdp}));
+            const answer = await peers[from].createAnswer();
+            await peers[from].setLocalDescription(answer);
+            push(ref(db, `rooms/${currentRoomId}/signals/${from}`), { from: userId, type: 'answer', sdp: answer.sdp });
+        } else if (type === 'answer') {
+            await peers[from].setRemoteDescription(new RTCSessionDescription({type, sdp}));
+        } else if (candidate) {
+            peers[from].addIceCandidate(new RTCIceCandidate(candidate));
+        }
+    });
+}
+
+async function initiatePeerConnection(remoteId, isCaller) {
+    if (peers[remoteId]) return;
+
+    const pc = new RTCPeerConnection(iceServers);
+    peers[remoteId] = pc;
+
+    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+
+    pc.ontrack = (e) => {
+        if (document.getElementById(`video-${remoteId}`)) return;
+        const container = document.getElementById("video-grid");
+        const wrapper = document.createElement("div");
+        wrapper.className = "video-wrapper";
+        wrapper.id = `video-wrapper-${remoteId}`;
+        wrapper.innerHTML = `<video id="video-${remoteId}" autoplay playsinline></video><div class="label">Stranger</div>`;
+        container.appendChild(wrapper);
+        document.getElementById(`video-${remoteId}`).srcObject = e.streams[0];
     };
 
-    pc.onicecandidate = e => {
-        if (e.candidate) {
-            push(ref(db, `rooms/${currentRoom}/signals/${targetId}/${myId}/ice`), e.candidate.toJSON());
-        }
+    pc.onicecandidate = (e) => {
+        if (e.candidate) push(ref(db, `rooms/${currentRoomId}/signals/${remoteId}`), { from: userId, candidate: e.candidate.toJSON() });
     };
 
     if (isCaller) {
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
-        set(ref(db, `rooms/${currentRoom}/signals/${myId}/${targetId}/offer`), { sdp: offer.sdp, type: offer.type });
+        push(ref(db, `rooms/${currentRoomId}/signals/${remoteId}`), { from: userId, type: 'offer', sdp: offer.sdp });
     }
 }
 
-function listenForSignaling() {
-    onValue(ref(db, `rooms/${currentRoom}/signals/${myId}`), snap => {
-        const incomingSignals = snap.val() || {};
-        for (let senderId in incomingSignals) {
-            const signal = incomingSignals[senderId];
-            const pc = peers[senderId];
-            if (!pc) continue;
-
-            if (signal.offer && !pc.currentRemoteDescription) {
-                pc.setRemoteDescription(new RTCSessionDescription(signal.offer)).then(async () => {
-                    const ans = await pc.createAnswer();
-                    await pc.setLocalDescription(ans);
-                    set(ref(db, `rooms/${currentRoom}/signals/${myId}/${senderId}/answer`), { sdp: ans.sdp, type: ans.type });
-                    // ফিরতি সিগন্যাল পাঠানো
-                    set(ref(db, `rooms/${currentRoom}/signals/${senderId}/${myId}/answer`), { sdp: ans.sdp, type: ans.type });
-                });
-            }
-            if (signal.answer && !pc.currentRemoteDescription) {
-                pc.setRemoteDescription(new RTCSessionDescription(signal.answer));
-            }
-            if (signal.ice) {
-                Object.values(signal.ice).forEach(c => pc.addIceCandidate(new RTCIceCandidate(c)).catch(()=>{}));
-                // ক্যান্ডিডেট প্রসেস শেষে রিমুভ করা ভালো (অপশনাল)
-            }
-        }
-    });
-}
-
-// --- কন্ট্রোল ফাংশন ---
-window.toggleMute = () => {
-    isMuted = !isMuted;
-    myStream.getAudioTracks()[0].enabled = !isMuted;
-    const btn = document.getElementById("muteBtn");
-    btn.innerText = isMuted ? "🔇 মাইক বন্ধ" : "🎤 মাইক চালু";
-    btn.classList.toggle("active-tool", isMuted);
+window.toggleCam = () => {
+    const videoTrack = localStream.getVideoTracks()[0];
+    videoTrack.enabled = !videoTrack.enabled;
 };
 
-window.toggleCamera = () => {
-    isCamOn = !isCamOn;
-    myStream.getVideoTracks()[0].enabled = isCamOn;
-    document.getElementById("localVideo").style.display = isCamOn ? "block" : "none";
-    const btn = document.getElementById("camBtn");
-    btn.innerText = isCamOn ? "📷 ক্যামেরা চালু" : "📷 ক্যামেরা বন্ধ";
-    btn.classList.toggle("active-tool", isCamOn);
+// Simplified chat for groups
+window.sendGroupMsg = () => {
+    const text = document.getElementById("chatInput").value;
+    push(ref(db, `rooms/${currentRoomId}/chat`), { user: userId, text });
+    document.getElementById("chatInput").value = "";
 };
 
-let speakerOff = false;
-window.toggleSpeaker = () => {
-    speakerOff = !speakerOff;
-    const vids = document.querySelectorAll("#video-grid video");
-    vids.forEach(v => {
-        if(v.id !== "localVideo") v.muted = speakerOff;
-    });
-    const btn = document.getElementById("speakerBtn");
-    btn.innerText = speakerOff ? "🔈 স্পিকার বন্ধ" : "🔊 স্পিকার চালু";
-    btn.classList.toggle("active-tool", speakerOff);
-};
-
-window.leaveRoom = () => {
-    if(confirm("আপনি কি কলটি শেষ করতে চান?")) location.reload();
-};
+// Listen for group chat messages
+// (Add onValue for `rooms/${currentRoomId}/chat` similar to your previous code)
 </script>
 </body>
 </html>
