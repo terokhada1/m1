@@ -3,17 +3,18 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mobile + Web Audio Call</title>
+<title>Audio Call Controls</title>
 <style>
 body { font-family: sans-serif; text-align: center; padding: 20px; }
-button { padding: 15px 25px; font-size: 18px; margin: 10px; border-radius: 10px; }
+button { padding: 15px 25px; font-size: 18px; margin: 5px; border-radius: 10px; }
 h2 { font-size: 24px; margin-bottom: 20px; }
-#callStatus { font-size: 20px; margin-top: 20px; }
+#incomingCall { display: none; margin-top: 20px; }
+#callStatus, #callerInfo { font-size: 20px; margin-top: 15px; }
 </style>
 </head>
 <body>
 
-<h2>📞 Audio Call System</h2>
+<h2>📞 Audio Call with Controls</h2>
 
 <label for="username">Your Name:</label>
 <input type="text" id="username" placeholder="Enter your name">
@@ -22,7 +23,18 @@ h2 { font-size: 24px; margin-bottom: 20px; }
 <button onclick="startCall()">Start Call</button>
 <button onclick="endCall()">End Call</button>
 
+<div id="incomingCall">
+  <h3>Incoming Call from <span id="incomingCaller">Unknown</span></h3>
+  <button onclick="acceptCall()">Accept</button>
+  <button onclick="rejectCall()">Reject</button>
+</div>
+
+<br>
 <audio id="remoteAudio" autoplay playsinline></audio>
+
+<br><br>
+<button id="muteBtn" onclick="toggleMute()">Mute</button>
+<button id="speakerBtn" onclick="toggleSpeaker()">Speaker</button>
 
 <div id="callStatus">Call Status: None</div>
 <div id="callerInfo">Caller: None</div>
@@ -31,7 +43,7 @@ h2 { font-size: 24px; margin-bottom: 20px; }
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 import { getDatabase, ref, set, onValue, push, remove } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
-// 🔥 Firebase Config
+// Firebase Config
 const firebaseConfig = {
   apiKey: "AIzaSyDQDrOlYu4GFuba1v1PJGlyLSIEm6Li6No",
   authDomain: "bongocall-cad70.firebaseapp.com",
@@ -45,14 +57,13 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// 🌐 WebRTC setup
-const peer = new RTCPeerConnection({
-  iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
-});
+// WebRTC
+let peer = null;
+let localStream = null;
+let isMuted = false;
+let isSpeakerOn = true;
 
-let localStream;
-
-// 🌟 Update Call Status
+// 🔹 Update Call Status
 function updateStatus(status, callerName="") {
   set(ref(db, "call/status"), status);
   set(ref(db, "call/caller"), callerName);
@@ -62,19 +73,17 @@ function updateStatus(status, callerName="") {
 window.startCall = async () => {
   const username = document.getElementById("username").value || "Unknown";
   localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+  peer = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
   localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
 
   peer.ontrack = e => {
     const audio = document.getElementById("remoteAudio");
     audio.srcObject = e.streams[0];
-    audio.play().catch(() => {});
+    audio.play().catch(()=>{});
   };
 
-  peer.onicecandidate = e => {
-    if (e.candidate) {
-      push(ref(db, "call/candidates"), e.candidate);
-    }
-  };
+  peer.onicecandidate = e => { if(e.candidate) push(ref(db, "call/candidates"), e.candidate); }
 
   const offer = await peer.createOffer();
   await peer.setLocalDescription(offer);
@@ -82,50 +91,85 @@ window.startCall = async () => {
   updateStatus("calling", username);
 };
 
-// 📞 Receive Offer
-onValue(ref(db, "call/offer"), async snap => {
-  if (!snap.exists()) return;
-
-  await peer.setRemoteDescription(snap.val());
-  const answer = await peer.createAnswer();
-  await peer.setLocalDescription(answer);
-  set(ref(db, "call/answer"), answer);
-});
-
-// 📩 Receive Answer
-onValue(ref(db, "call/answer"), async snap => {
-  if (!snap.exists()) return;
-  await peer.setRemoteDescription(snap.val());
-});
-
-// ❄ ICE candidates
-onValue(ref(db, "call/candidates"), snap => {
-  snap.forEach(child => {
-    peer.addIceCandidate(new RTCIceCandidate(child.val()));
-  });
-});
-
-// 📊 Show live call status on Web
+// 🔹 Incoming Call Listener
 onValue(ref(db, "call/status"), snap => {
   const status = snap.val() || "None";
   document.getElementById("callStatus").innerText = "Call Status: " + status;
+  if(status === "calling") {
+    onValue(ref(db, "call/caller"), callerSnap => {
+      const callerName = callerSnap.val() || "Unknown";
+      document.getElementById("incomingCaller").innerText = callerName;
+      document.getElementById("incomingCall").style.display = "block";
+    });
+  } else {
+    document.getElementById("incomingCall").style.display = "none";
+  }
 });
 
-// 📊 Show who is calling
-onValue(ref(db, "call/caller"), snap => {
-  const caller = snap.val() || "None";
-  document.getElementById("callerInfo").innerText = "Caller: " + caller;
-});
+// 🔹 Accept Call
+window.acceptCall = async () => {
+  document.getElementById("incomingCall").style.display = "none";
 
-// ❌ End Call
+  localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  peer = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+  localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
+
+  peer.ontrack = e => {
+    const audio = document.getElementById("remoteAudio");
+    audio.srcObject = e.streams[0];
+    audio.play().catch(()=>{});
+  };
+
+  peer.onicecandidate = e => { if(e.candidate) push(ref(db, "call/candidates"), e.candidate); }
+
+  // Set remote offer
+  onValue(ref(db, "call/offer"), async snap => {
+    if(!snap.exists()) return;
+    await peer.setRemoteDescription(snap.val());
+    const answer = await peer.createAnswer();
+    await peer.setLocalDescription(answer);
+    set(ref(db, "call/answer"), answer);
+    updateStatus("in-call");
+  });
+
+  // Listen for ICE
+  onValue(ref(db, "call/candidates"), snap => {
+    snap.forEach(child => { peer.addIceCandidate(new RTCIceCandidate(child.val())); });
+  });
+};
+
+// 🔹 Reject Call
+window.rejectCall = () => {
+  remove(ref(db, "call"));
+  document.getElementById("incomingCall").style.display = "none";
+  alert("Call Rejected");
+};
+
+// 🔹 End Call
 window.endCall = () => {
-  peer.close();
+  if(peer) peer.close();
   remove(ref(db, "call"));
   document.getElementById("callStatus").innerText = "Call Status: Ended";
   document.getElementById("callerInfo").innerText = "Caller: None";
   alert("Call Ended");
 };
-</script>
 
+// 🔹 Mute / Unmute
+window.toggleMute = () => {
+  if(!localStream) return;
+  localStream.getAudioTracks().forEach(track => track.enabled = isMuted);
+  isMuted = !isMuted;
+  document.getElementById("muteBtn").innerText = isMuted ? "Unmute" : "Mute";
+};
+
+// 🔹 Speaker Toggle (simulate using volume)
+window.toggleSpeaker = () => {
+  const audio = document.getElementById("remoteAudio");
+  isSpeakerOn = !isSpeakerOn;
+  audio.volume = isSpeakerOn ? 1.0 : 0.0;
+  document.getElementById("speakerBtn").innerText = isSpeakerOn ? "Speaker" : "Mute Speaker";
+};
+
+</script>
 </body>
 </html>
