@@ -3,36 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stranger Group Chat - Debug Mode</title>
+    <title>Stranger Group - Stable Home</title>
     <style>
-        body { font-family: sans-serif; background: #0b0e14; color: white; text-align: center; margin: 0; padding: 20px; }
-        #video-grid { display: grid; grid-template-columns: 1fr; gap: 10px; max-width: 500px; margin: auto; }
-        .video-box { background: #1c212c; border-radius: 15px; overflow: hidden; aspect-ratio: 4/3; position: relative; border: 1px solid #30363d; }
-        video { width: 100%; height: 100%; object-fit: cover; background: #000; }
-        .label { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.5); padding: 4px 10px; border-radius: 5px; font-size: 12px; }
+        :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --primary: #238636; --danger: #da3633; --accent: #2f81f7; }
+        body { font-family: -apple-system, sans-serif; background: var(--bg); color: white; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         
-        /* Debug Console */
-        #debug-log { background: #000; color: #0f0; font-family: monospace; font-size: 10px; padding: 10px; height: 100px; overflow-y: auto; text-align: left; margin-top: 20px; border: 1px solid #333; }
-        .btn { padding: 15px 40px; border-radius: 30px; border: none; background: #238636; color: white; font-weight: bold; cursor: pointer; margin-top: 20px; }
+        /* Home Screen Fixed */
+        #home-screen { position: fixed; inset: 0; background: var(--bg); z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 20px; }
+        .mode-card { background: var(--card); padding: 30px; border-radius: 20px; border: 1px solid var(--border); text-align: center; width: 85%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        
+        /* Video Grid Area */
+        #main-container { display: flex; flex-direction: row; flex-grow: 1; overflow: hidden; }
+        #video-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; padding: 15px; flex-grow: 1; align-content: start; overflow-y: auto; }
+        .video-box { position: relative; background: var(--card); border-radius: 12px; overflow: hidden; aspect-ratio: 4/3; border: 1px solid var(--border); }
+        video { width: 100%; height: 100%; object-fit: cover; background: #000; }
+        
+        /* Status Overlays */
+        .status-overlay { position: absolute; inset: 0; background: rgba(13, 17, 23, 0.95); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 10; text-align: center; }
+        .status-overlay.active { display: flex; }
+        .status-text { color: var(--danger); font-weight: bold; font-size: 1.1rem; }
+
+        /* Sidebar Chat */
+        #chat-sidebar { width: 300px; background: var(--card); border-left: 1px solid var(--border); display: flex; flex-direction: column; }
+        #messages { flex-grow: 1; overflow-y: auto; padding: 10px; font-size: 13px; display: flex; flex-direction: column; gap: 8px; }
+        .msg { padding: 8px 12px; border-radius: 8px; max-width: 85%; line-height: 1.4; }
+        .msg.you { align-self: flex-end; background: var(--accent); color: white; }
+        .msg.str { align-self: flex-start; background: var(--border); color: #e6edf3; }
+
+        /* Control Bar */
+        .controls { background: #161b22; padding: 15px; display: flex; justify-content: center; gap: 10px; border-top: 1px solid var(--border); }
+        .btn { padding: 12px 20px; border-radius: 25px; border: none; cursor: pointer; font-weight: bold; background: #30363d; color: white; transition: 0.2s; }
+        .btn-mode { width: 100%; margin: 10px 0; font-size: 1.1rem; border-radius: 12px; }
+        .btn-video { background: var(--accent); }
+        .btn-audio { background: var(--primary); }
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-    <h3>Stranger Group Chat</h3>
-    <div id="video-grid">
-        <div class="video-box">
-            <video id="localVideo" autoplay muted playsinline></video>
-            <div class="label">You</div>
+    <div id="home-screen">
+        <div class="mode-card">
+            <h2 style="margin-top:0">Stranger Group</h2>
+            <p style="color: #8b949e; margin-bottom: 25px;">Ready to meet new people?</p>
+            <button class="btn btn-mode btn-video" onclick="startApp('video')">📹 Video Chat</button>
+            <button class="btn btn-mode btn-audio" onclick="startApp('audio')">🎤 Audio Only</button>
         </div>
     </div>
 
-    <button id="joinBtn" class="btn" onclick="startApp()">Join Chat</button>
+    <div id="main-container">
+        <div id="video-grid">
+            <div class="video-box" id="localBox">
+                <video id="localVideo" autoplay muted playsinline></video>
+                <div id="audio-only-ui" class="status-overlay">
+                    <div style="font-size: 50px;">👤</div>
+                    <p style="margin-top:10px; color:#8b949e">Microphone Only Mode</p>
+                </div>
+                <div style="position: absolute; bottom: 8px; left: 8px; font-size: 11px; background: rgba(0,0,0,0.6); padding: 2px 8px; border-radius: 4px; z-index:11">You</div>
+            </div>
+        </div>
 
-    <div id="debug-log">System: Ready. Press Join.</div>
+        <div id="chat-sidebar" class="hidden">
+            <div id="messages"></div>
+            <div style="padding: 10px; border-top: 1px solid var(--border); display: flex; gap: 5px;">
+                <input type="text" id="msgInput" placeholder="Type a message..." style="flex-grow: 1; background: #010409; border: 1px solid var(--border); color: white; padding: 10px; border-radius: 8px;">
+                <button onclick="sendChat()" style="background:var(--accent); color:white; border:none; border-radius:8px; padding: 0 15px; cursor:pointer">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="actionButtons" class="controls hidden">
+        <button id="micBtn" class="btn" onclick="toggleMic()">🎤 Mic</button>
+        <button id="camBtn" class="btn" onclick="toggleCam()">📷 Cam</button>
+        <button class="btn" onclick="toggleChat()">💬 Chat</button>
+        <button class="btn" style="background:var(--danger)" onclick="leaveChat()">Leave Room</button>
+    </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getDatabase, ref, set, push, onChildAdded, get, onDisconnect } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
+import { getDatabase, ref, set, push, onChildAdded, onChildRemoved, get, onDisconnect, remove } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyDQDrOlYu4GFuba1v1PJGlyLSIEm6Li6No",
@@ -43,84 +91,103 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-const userId = 'user-' + Math.floor(Math.random() * 9000);
-const iceServers = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }, { urls: "stun:stun1.l.google.com:19302" }] };
+const userId = 'User-' + Math.floor(Math.random() * 9000);
+const iceServers = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+
 let localStream, currentRoomId, peers = {};
 
-function log(msg) {
-    const console = document.getElementById("debug-log");
-    console.innerHTML += `<br>> ${msg}`;
-    console.scrollTop = console.scrollHeight;
-}
-
-window.startApp = async () => {
+window.startApp = async (mode) => {
     try {
-        log("Requesting Camera...");
-        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        const constraints = { 
+            audio: true, 
+            video: mode === 'video' ? { width: 640, height: 480 } : false 
+        };
+        
+        localStream = await navigator.mediaDevices.getUserMedia(constraints);
         document.getElementById("localVideo").srcObject = localStream;
-        document.getElementById("joinBtn").style.display = "none";
-        log("Camera OK. Finding room...");
-        joinRoom();
-    } catch (e) {
-        log("ERROR: Camera denied or not found!");
-        alert("Please allow Camera and Mic permission!");
+        
+        if(mode === 'audio') {
+            document.getElementById("audio-only-ui").classList.add("active");
+            document.getElementById("camBtn").style.display = "none"; // Hide cam btn in audio mode
+        }
+        
+        document.getElementById("home-screen").style.display = "none";
+        document.getElementById("actionButtons").classList.remove("hidden");
+        document.getElementById("chat-sidebar").classList.remove("hidden");
+        
+        findRoom();
+    } catch (err) { 
+        console.error(err);
+        alert("Permission Error: Please allow Camera/Mic access."); 
     }
 };
 
-async function joinRoom() {
+async function findRoom() {
     const roomsRef = ref(db, 'rooms');
     const snap = await get(roomsRef);
     const rooms = snap.val() || {};
-
-    // Find a room with space
-    currentRoomId = Object.keys(rooms).find(id => Object.keys(rooms[id].users || {}).length < 4) || 'room-' + Math.floor(Math.random() * 99);
     
-    log(`Joining Room: ${currentRoomId}`);
-    const userRef = ref(db, `rooms/${currentRoomId}/users/${userId}`);
-    set(userRef, { id: userId });
-    onDisconnect(userRef).remove();
+    // Logic to find room with space
+    currentRoomId = Object.keys(rooms).find(id => {
+        const users = rooms[id].users || {};
+        return Object.keys(users).length < 4;
+    }) || 'Room-' + Math.floor(Math.random() * 999);
 
-    // Listen for others
-    onChildAdded(ref(db, `rooms/${currentRoomId}/users`), (s) => {
-        if (s.key !== userId) {
-            log(`Stranger found: ${s.key}. Connecting...`);
-            initiatePeer(s.key, true);
+    const userRef = ref(db, `rooms/${currentRoomId}/users/${userId}`);
+    await set(userRef, { id: userId });
+    onDisconnect(userRef).remove();
+    
+    onChildAdded(ref(db, `rooms/${currentRoomId}/chat`), (s) => addMessage(s.val()));
+    onChildAdded(ref(db, `rooms/${currentRoomId}/users`), (s) => { if (s.key !== userId) createPeer(s.key, true); });
+    
+    onChildRemoved(ref(db, `rooms/${currentRoomId}/users`), (s) => {
+        const strangerId = s.key;
+        if (peers[strangerId]) {
+            peers[strangerId].close();
+            delete peers[strangerId];
+            const overlay = document.getElementById(`status-${strangerId}`);
+            if (overlay) {
+                overlay.classList.add('active');
+                setTimeout(() => document.getElementById(`box-${strangerId}`)?.remove(), 3500);
+            }
         }
     });
 
-    // Listen for signals
+    // Signaling Handshake
     onChildAdded(ref(db, `rooms/${currentRoomId}/signals/${userId}`), async (s) => {
         const data = s.val();
-        if (!peers[data.from]) initiatePeer(data.from, false);
-        
+        if (!peers[data.from]) createPeer(data.from, false);
+        const pc = peers[data.from];
         try {
             if (data.type === 'offer') {
-                await peers[data.from].setRemoteDescription(new RTCSessionDescription(data));
-                const ans = await peers[data.from].createAnswer();
-                await peers[data.from].setLocalDescription(ans);
+                if (pc.signalingState !== "stable" && userId < data.from) return;
+                await pc.setRemoteDescription(new RTCSessionDescription(data));
+                const ans = await pc.createAnswer();
+                await pc.setLocalDescription(ans);
                 push(ref(db, `rooms/${currentRoomId}/signals/${data.from}`), { from: userId, type: 'answer', sdp: ans.sdp });
             } else if (data.type === 'answer') {
-                await peers[data.from].setRemoteDescription(new RTCSessionDescription(data));
-            } else if (data.candidate) {
-                await peers[data.from].addIceCandidate(new RTCIceCandidate(data.candidate));
+                if (pc.signalingState === "have-local-offer") await pc.setRemoteDescription(new RTCSessionDescription(data));
+            } else if (data.candidate) { 
+                await pc.addIceCandidate(new RTCIceCandidate(data.candidate)); 
             }
-        } catch (err) { log("Signaling Error: " + err.message); }
+        } catch (e) { console.warn("Signaling error:", e); }
     });
 }
 
-function initiatePeer(remoteId, isCaller) {
+function createPeer(remoteId, isCaller) {
     if (peers[remoteId]) return;
     const pc = new RTCPeerConnection(iceServers);
     peers[remoteId] = pc;
-
     localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-
+    
     pc.ontrack = (e) => {
-        log("SUCCESS: Stranger video track received!");
         if (document.getElementById(`vid-${remoteId}`)) return;
         const box = document.createElement("div");
-        box.className = "video-box";
-        box.innerHTML = `<video id="vid-${remoteId}" autoplay playsinline></video><div class="label">Stranger</div>`;
+        box.className = "video-box"; box.id = `box-${remoteId}`;
+        box.innerHTML = `
+            <video id="vid-${remoteId}" autoplay playsinline></video>
+            <div class="status-overlay" id="status-${remoteId}"><div class="status-text">Stranger Leaved</div></div>
+            <div style="position: absolute; bottom: 8px; left: 8px; font-size: 11px; background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 4px;">Stranger</div>`;
         document.getElementById("video-grid").appendChild(box);
         document.getElementById(`vid-${remoteId}`).srcObject = e.streams[0];
     };
@@ -137,6 +204,46 @@ function initiatePeer(remoteId, isCaller) {
         };
     }
 }
+
+// Fixed UI Logic
+const getThemeColor = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+window.toggleMic = () => {
+    const t = localStream.getAudioTracks()[0]; 
+    if(!t) return;
+    t.enabled = !t.enabled;
+    document.getElementById("micBtn").style.background = t.enabled ? "#30363d" : getThemeColor('--danger');
+};
+
+window.toggleCam = () => {
+    const t = localStream.getVideoTracks()[0]; 
+    if(!t) return;
+    t.enabled = !t.enabled;
+    document.getElementById("camBtn").style.background = t.enabled ? "#30363d" : getThemeColor('--danger');
+};
+
+window.toggleChat = () => document.getElementById("chat-sidebar").classList.toggle("hidden");
+
+window.sendChat = () => {
+    const el = document.getElementById("msgInput");
+    if (el.value.trim()) { 
+        push(ref(db, `rooms/${currentRoomId}/chat`), { user: userId, text: el.value.trim() }); 
+        el.value = ""; 
+    }
+};
+
+function addMessage(data) {
+    const div = document.createElement("div");
+    div.className = `msg ${data.user === userId ? 'you' : 'str'}`;
+    div.innerText = (data.user === userId ? "You: " : "Stranger: ") + data.text;
+    const m = document.getElementById("messages");
+    m.appendChild(div); 
+    m.scrollTop = m.scrollHeight;
+}
+
+window.leaveChat = () => {
+    if(confirm("Are you sure you want to leave?")) location.reload();
+};
 </script>
 </body>
 </html>
