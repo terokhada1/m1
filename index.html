@@ -3,72 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Omegle Clone - Video & Chat</title>
+    <title>Group Audio Room</title>
     <style>
-        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .container { width: 100%; max-width: 900px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
-        
-        /* Video Styling */
-        #video-container { display: flex; gap: 10px; margin-bottom: 20px; position: relative; background: #000; border-radius: 8px; overflow: hidden; min-height: 300px; }
-        video { flex: 1; width: 50%; background: #222; object-fit: cover; }
-        #localVideo { width: 150px; height: 110px; position: absolute; bottom: 10px; right: 10px; border: 2px solid #fff; border-radius: 4px; z-index: 10; }
-        
-        /* Chat Styling */
-        #chatSection { display: none; border: 1px solid #ddd; border-radius: 8px; flex-direction: column; height: 300px; }
-        #messages { flex-grow: 1; padding: 15px; overflow-y: auto; background: #fff; display: flex; flex-direction: column; gap: 8px; }
-        .msg { margin: 0; padding: 5px 10px; border-radius: 5px; max-width: 80%; }
-        .you { align-self: flex-end; background: #0084ff; color: white; }
-        .stranger { align-self: flex-start; background: #e4e6eb; color: black; }
-        
-        .chat-input-area { display: flex; padding: 10px; border-top: 1px solid #ddd; }
-        input[type="text"] { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 20px; outline: none; }
-        
-        /* Controls */
-        .controls { margin-top: 15px; display: flex; gap: 10px; justify-content: center; }
-        button { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.3s; }
-        .btn-start { background: #31a24c; color: white; font-size: 1.1em; }
-        .btn-next { background: #f02849; color: white; }
-        .btn-action { background: #e4e6eb; color: #050505; }
-        button:disabled { opacity: 0.5; cursor: not-allowed; }
-        
-        #callStatus { margin: 10px 0; font-weight: bold; color: #65676b; }
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a1a; color: white; display: flex; justify-content: center; padding: 20px; }
+        .card { background: #2a2a2a; padding: 30px; border-radius: 20px; width: 100%; max-width: 500px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        input { width: 80%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; font-size: 16px; }
+        button { padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; background: #0084ff; color: white; margin: 5px; }
+        .leave-btn { background: #f02849; }
+        #participant-list { margin-top: 20px; text-align: left; background: #333; padding: 15px; border-radius: 10px; }
+        .user-tag { display: inline-block; background: #444; padding: 5px 12px; margin: 5px; border-radius: 20px; font-size: 14px; border: 1px solid #555; }
+        .visualizer { height: 5px; background: #0084ff; width: 0%; transition: width 0.1s; margin-top: 5px; border-radius: 2px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2 style="color: #0084ff;">Stranger Video Chat</h2>
+<div class="card">
+    <h2>🎙️ Group Audio Room</h2>
+    <div id="setup">
+        <input type="text" id="roomInput" placeholder="Enter Room Name (e.g. 'gaming')">
+        <br>
+        <button onclick="joinRoom()">Join Voice Room</button>
+    </div>
+
+    <div id="roomControls" style="display:none;">
+        <h3 id="activeRoom">Room: None</h3>
+        <div id="participant-list">
+            <strong>In the call:</strong><br>
+            <div id="users"></div>
+        </div>
+        <br>
+        <button id="muteBtn" onclick="toggleMute()">Mute Mic</button>
+        <button class="leave-btn" onclick="leaveRoom()">Leave Call</button>
+    </div>
     
-    <div id="callStatus">Status: Ready to connect</div>
-
-    <div id="video-container">
-        <video id="remoteVideo" autoplay playsinline></video>
-        <video id="localVideo" autoplay muted playsinline></video>
-    </div>
-
-    <div id="chatSection">
-        <div id="messages"></div>
-        <div class="chat-input-area">
-            <input type="text" id="chatInput" placeholder="Type a message...">
-            <button class="btn-action" onclick="sendMessage()">Send</button>
-        </div>
-    </div>
-
-    <div class="controls">
-        <button id="startBtn" class="btn-start" onclick="startOmegle()">Find Stranger</button>
-        <div id="activeControls" style="display:none; gap:10px;">
-            <button class="btn-next" onclick="nextStranger()">Next Stranger</button>
-            <button class="btn-action" id="muteBtn" onclick="toggleMute()">Mute</button>
-            <button class="btn-action" id="videoBtn" onclick="toggleVideo()">Video Off</button>
-        </div>
-    </div>
+    <div id="remote-audios"></div>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getDatabase, ref, set, onValue, remove, onDisconnect, push, get, update } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
+import { getDatabase, ref, set, onValue, push, remove, onDisconnect, get } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
-// --- PASTE YOUR FIREBASE CONFIG HERE ---
 const firebaseConfig = {
     apiKey: "AIzaSyDQDrOlYu4GFuba1v1PJGlyLSIEm6Li6No",
     authDomain: "bongocall-cad70.firebaseapp.com",
@@ -82,156 +56,139 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-let userId = 'user-' + Math.floor(Math.random() * 1000000);
-let peer, localStream, currentCallId, isSearching = false;
+const myId = 'user-' + Math.floor(Math.random() * 10000);
+let myStream;
+let peers = {}; // Stores RTCPeerConnection for every other user
+let currentRoom = null;
+
 const servers = { iceServers: [{ urls: ["stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19302"] }] };
 
-const statusEl = document.getElementById("callStatus");
-const messagesDiv = document.getElementById("messages");
-const chatInput = document.getElementById("chatInput");
+window.joinRoom = async () => {
+    const roomName = document.getElementById("roomInput").value.trim();
+    if (!roomName) return alert("Enter a room name");
+    currentRoom = roomName;
 
-// Allow "Enter" key to send messages
-chatInput.addEventListener("keypress", (e) => { if (e.key === "Enter") sendMessage(); });
+    // 1. Get Audio
+    myStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    
+    // 2. Register presence
+    const myRef = ref(db, `rooms/${currentRoom}/users/${myId}`);
+    set(myRef, { id: myId, joinedAt: Date.now() });
+    onDisconnect(myRef).remove();
 
+    document.getElementById("setup").style.display = "none";
+    document.getElementById("roomControls").style.display = "block";
+    document.getElementById("activeRoom").innerText = `Room: ${currentRoom}`;
 
+    // 3. Listen for other users
+    onValue(ref(db, `rooms/${currentRoom}/users`), async (snapshot) => {
+        const users = snapshot.val() || {};
+        updateUserList(users);
 
-// --- 1. Matching Logic ---
-window.startOmegle = async () => {
-    if(isSearching) return;
-    isSearching = true;
-    statusEl.innerText = "Searching for a stranger...";
-    document.getElementById("startBtn").style.display = 'none';
-    document.getElementById("activeControls").style.display = 'flex';
-
-    try {
-        if(!localStream) {
-            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            document.getElementById("localVideo").srcObject = localStream;
+        for (let userId in users) {
+            if (userId !== myId && !peers[userId]) {
+                // If a new user joined who joined AFTER me, I call them
+                if (users[userId].joinedAt > users[myId].joinedAt) {
+                    initiatePeerConnection(userId, true);
+                } else {
+                    initiatePeerConnection(userId, false);
+                }
+            }
         }
-    } catch (e) {
-        statusEl.innerText = "Camera/Mic access denied!";
-        return;
-    }
+    });
 
-    const queueRef = ref(db, "queue");
-    const snapshot = await get(queueRef);
-    const queue = snapshot.val();
-
-    if (queue) {
-        const strangerId = Object.keys(queue)[0];
-        await remove(ref(db, `queue/${strangerId}`));
-        initiateCall(strangerId);
-    } else {
-        set(ref(db, `queue/${userId}`), { id: userId });
-        onDisconnect(ref(db, `queue/${userId}`)).remove();
-        listenForIncomingMatch();
-    }
+    // 4. Listen for signaling (Offers/Answers/ICE)
+    listenForSignaling();
 };
 
-// --- 2. Signaling ---
-async function initiateCall(targetId) {
-    currentCallId = `${userId}_${targetId}`;
-    await setupPeer(targetId);
+async function initiatePeerConnection(targetId, isCaller) {
+    const pc = new RTCPeerConnection(servers);
+    peers[targetId] = pc;
 
-    const offer = await peer.createOffer();
-    await peer.setLocalDescription(offer);
+    myStream.getTracks().forEach(track => pc.addTrack(track, myStream));
 
-    set(ref(db, `calls/${currentCallId}`), {
-        offer: { type: offer.type, sdp: offer.sdp },
-        callerId: userId,
-        targetId: targetId
-    });
-
-    onValue(ref(db, `calls/${currentCallId}/answer`), async snap => {
-        const data = snap.val();
-        if (data && !peer.currentRemoteDescription) {
-            await peer.setRemoteDescription(new RTCSessionDescription(data));
-            startChatSession();
+    pc.ontrack = (event) => {
+        let audio = document.getElementById(`audio-${targetId}`);
+        if (!audio) {
+            audio = document.createElement("audio");
+            audio.id = `audio-${targetId}`;
+            audio.autoplay = true;
+            document.getElementById("remote-audios").appendChild(audio);
         }
-    });
+        audio.srcObject = event.streams[0];
+    };
+
+    pc.onicecandidate = (e) => {
+        if (e.candidate) {
+            push(ref(db, `rooms/${currentRoom}/signals/${targetId}/${myId}/ice`), e.candidate.toJSON());
+        }
+    };
+
+    if (isCaller) {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        set(ref(db, `rooms/${currentRoom}/signals/${myId}/${targetId}/offer`), { sdp: offer.sdp, type: offer.type });
+    }
 }
 
-function listenForIncomingMatch() {
-    onValue(ref(db, "calls"), async snap => {
-        const calls = snap.val();
-        for (let id in calls) {
-            if (calls[id].targetId === userId && !calls[id].answer) {
-                currentCallId = id;
-                await setupPeer(calls[id].callerId);
-                await peer.setRemoteDescription(new RTCSessionDescription(calls[id].offer));
-                const answer = await peer.createAnswer();
-                await peer.setLocalDescription(answer);
-                update(ref(db, `calls/${currentCallId}`), { answer: { type: answer.type, sdp: answer.sdp } });
-                startChatSession();
+function listenForSignaling() {
+    // Listen for offers sent TO me
+    onValue(ref(db, `rooms/${currentRoom}/signals`), (snapshot) => {
+        const allSignals = snapshot.val() || {};
+
+        for (let senderId in allSignals) {
+            if (senderId === myId) continue;
+            
+            const mySignals = allSignals[senderId][myId];
+            if (!mySignals) continue;
+
+            const pc = peers[senderId];
+            if (!pc) return;
+
+            // Handle Offer
+            if (mySignals.offer && !pc.currentRemoteDescription) {
+                pc.setRemoteDescription(new RTCSessionDescription(mySignals.offer)).then(async () => {
+                    const answer = await pc.createAnswer();
+                    await pc.setLocalDescription(answer);
+                    set(ref(db, `rooms/${currentRoom}/signals/${myId}/${senderId}/answer`), { sdp: answer.sdp, type: answer.type });
+                });
+            }
+
+            // Handle Answer
+            if (mySignals.answer && !pc.currentRemoteDescription) {
+                pc.setRemoteDescription(new RTCSessionDescription(mySignals.answer));
+            }
+
+            // Handle ICE
+            if (mySignals.ice) {
+                Object.values(mySignals.ice).forEach(cand => {
+                    pc.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
+                });
             }
         }
     });
 }
 
-// --- 3. Peer Configuration ---
-async function setupPeer(remoteId) {
-    peer = new RTCPeerConnection(servers);
-    localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
-    
-    peer.ontrack = e => {
-        document.getElementById("remoteVideo").srcObject = e.streams[0];
-        statusEl.innerText = "Connected to Stranger";
-    };
-
-    peer.onicecandidate = e => {
-        if (e.candidate) push(ref(db, `calls/${currentCallId}/candidates/${userId}`), e.candidate.toJSON());
-    };
-
-    onValue(ref(db, `calls/${currentCallId}/candidates/${remoteId}`), snap => {
-        snap.forEach(child => peer.addIceCandidate(new RTCIceCandidate(child.val())).catch(()=>{}));
+function updateUserList(users) {
+    const container = document.getElementById("users");
+    container.innerHTML = "";
+    Object.keys(users).forEach(id => {
+        const span = document.createElement("span");
+        span.className = "user-tag";
+        span.innerText = id === myId ? "You" : "Stranger";
+        container.appendChild(span);
     });
 }
-
-// --- 4. Chat Logic ---
-function startChatSession() {
-    document.getElementById("chatSection").style.display = 'flex';
-    onValue(ref(db, `calls/${currentCallId}/chat`), snap => {
-        messagesDiv.innerHTML = '';
-        snap.forEach(child => {
-            const msg = child.val();
-            const type = msg.sender === userId ? 'you' : 'stranger';
-            messagesDiv.innerHTML += `<p class="msg ${type}">${msg.text}</p>`;
-        });
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    });
-}
-
-window.sendMessage = () => {
-    const text = chatInput.value.trim();
-    if (text && currentCallId) {
-        push(ref(db, `calls/${currentCallId}/chat`), { sender: userId, text: text });
-        chatInput.value = '';
-    }
-};
-
-// --- 5. Clean up & Reset ---
-window.nextStranger = () => {
-    if (peer) peer.close();
-    if (currentCallId) remove(ref(db, `calls/${currentCallId}`));
-    remove(ref(db, `queue/${userId}`));
-    
-    document.getElementById("remoteVideo").srcObject = null;
-    document.getElementById("chatSection").style.display = 'none';
-    messagesDiv.innerHTML = '';
-    isSearching = false;
-    startOmegle();
-};
 
 window.toggleMute = () => {
-    const audioTrack = localStream.getAudioTracks()[0];
-    audioTrack.enabled = !audioTrack.enabled;
-    document.getElementById("muteBtn").innerText = audioTrack.enabled ? "Mute" : "Unmute";
+    const track = myStream.getAudioTracks()[0];
+    track.enabled = !track.enabled;
+    document.getElementById("muteBtn").innerText = track.enabled ? "Mute Mic" : "Unmute Mic";
+    document.getElementById("muteBtn").style.background = track.enabled ? "#0084ff" : "#555";
 };
 
-window.toggleVideo = () => {
-    const videoTrack = localStream.getVideoTracks()[0];
-    videoTrack.enabled = !videoTrack.enabled;
-    document.getElementById("videoBtn").innerText = videoTrack.enabled ? "Video Off" : "Video On";
+window.leaveRoom = () => {
+    location.reload();
 };
 </script>
 </body>
