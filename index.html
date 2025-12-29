@@ -3,41 +3,55 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Group Audio Room</title>
+    <title>Group Voice Room</title>
     <style>
-        body { font-family: 'Segoe UI', sans-serif; background: #1a1a1a; color: white; display: flex; justify-content: center; padding: 20px; }
-        .card { background: #2a2a2a; padding: 30px; border-radius: 20px; width: 100%; max-width: 500px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        input { width: 80%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; font-size: 16px; }
-        button { padding: 12px 24px; border-radius: 8px; border: none; cursor: pointer; font-weight: bold; background: #0084ff; color: white; margin: 5px; }
-        .leave-btn { background: #f02849; }
-        #participant-list { margin-top: 20px; text-align: left; background: #333; padding: 15px; border-radius: 10px; }
-        .user-tag { display: inline-block; background: #444; padding: 5px 12px; margin: 5px; border-radius: 20px; font-size: 14px; border: 1px solid #555; }
-        .visualizer { height: 5px; background: #0084ff; width: 0%; transition: width 0.1s; margin-top: 5px; border-radius: 2px; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #121212; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .container { width: 100%; max-width: 450px; background: #1e1e1e; padding: 25px; border-radius: 15px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); text-align: center; }
+        
+        input { width: 80%; padding: 12px; margin: 15px 0; border-radius: 8px; border: 1px solid #333; background: #2b2b2b; color: white; font-size: 16px; }
+        
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
+        button { padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        
+        .btn-join { background: #0084ff; color: white; width: 100%; font-size: 16px; }
+        .btn-mute { background: #333; color: white; }
+        .btn-speaker { background: #333; color: white; }
+        .btn-leave { background: #f02849; color: white; grid-column: span 2; margin-top: 10px; }
+        
+        #participant-list { margin-top: 25px; text-align: left; background: #252525; padding: 15px; border-radius: 10px; min-height: 100px; }
+        .user-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #333; }
+        .status-dot { height: 10px; width: 10px; background: #31a24c; border-radius: 50%; display: inline-block; margin-right: 8px; }
+        
+        .active-speaker { border-left: 3px solid #0084ff; padding-left: 10px; transition: 0.3s; }
     </style>
 </head>
 <body>
 
-<div class="card">
-    <h2>🎙️ Group Audio Room</h2>
-    <div id="setup">
-        <input type="text" id="roomInput" placeholder="Enter Room Name (e.g. 'gaming')">
-        <br>
-        <button onclick="joinRoom()">Join Voice Room</button>
+<div class="container">
+    <h2>🎙️ Voice Lobby</h2>
+    
+    <div id="login-screen">
+        <input type="text" id="roomInput" placeholder="Enter Room Name...">
+        <button class="btn-join" onclick="joinRoom()">Join Group Call</button>
     </div>
 
-    <div id="roomControls" style="display:none;">
-        <h3 id="activeRoom">Room: None</h3>
+    <div id="call-screen" style="display: none;">
+        <p id="room-display" style="color: #0084ff; font-weight: bold;"></p>
+        
         <div id="participant-list">
-            <strong>In the call:</strong><br>
-            <div id="users"></div>
+            <small style="color: #888;">Participants</small>
+            <div id="users-container"></div>
         </div>
-        <br>
-        <button id="muteBtn" onclick="toggleMute()">Mute Mic</button>
-        <button class="leave-btn" onclick="leaveRoom()">Leave Call</button>
+
+        <div class="controls">
+            <button id="muteBtn" class="btn-mute" onclick="toggleMute()">🎤 Mic On</button>
+            <button id="speakerBtn" class="btn-speaker" onclick="toggleSpeaker()">🔊 Speaker On</button>
+            <button class="btn-leave" onclick="leaveRoom()">❌ Leave Room</button>
+        </div>
     </div>
-    
-    <div id="remote-audios"></div>
 </div>
+
+<div id="remote-audios" style="display:none;"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
@@ -58,50 +72,55 @@ const db = getDatabase(app);
 
 const myId = 'user-' + Math.floor(Math.random() * 10000);
 let myStream;
-let peers = {}; // Stores RTCPeerConnection for every other user
+let peers = {}; 
+let isSpeakerOn = true;
 let currentRoom = null;
 
 const servers = { iceServers: [{ urls: ["stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19302"] }] };
 
+// --- Join Room Logic ---
 window.joinRoom = async () => {
-    const roomName = document.getElementById("roomInput").value.trim();
-    if (!roomName) return alert("Enter a room name");
+    const roomName = document.getElementById("roomInput").value.trim().toLowerCase();
+    if (!roomName) return alert("Please enter a room name");
+    
     currentRoom = roomName;
 
-    // 1. Get Audio
-    myStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-    
-    // 2. Register presence
-    const myRef = ref(db, `rooms/${currentRoom}/users/${myId}`);
-    set(myRef, { id: myId, joinedAt: Date.now() });
-    onDisconnect(myRef).remove();
+    try {
+        myStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+    } catch (e) {
+        alert("Microphone access is required for group calls.");
+        return;
+    }
 
-    document.getElementById("setup").style.display = "none";
-    document.getElementById("roomControls").style.display = "block";
-    document.getElementById("activeRoom").innerText = `Room: ${currentRoom}`;
+    // UI Updates
+    document.getElementById("login-screen").style.display = "none";
+    document.getElementById("call-screen").style.display = "block";
+    document.getElementById("room-display").innerText = "ROOM: " + currentRoom;
 
-    // 3. Listen for other users
-    onValue(ref(db, `rooms/${currentRoom}/users`), async (snapshot) => {
+    // Presence
+    const userRef = ref(db, `rooms/${currentRoom}/users/${myId}`);
+    set(userRef, { id: myId, joinedAt: Date.now() });
+    onDisconnect(userRef).remove();
+
+    // Listen for users
+    onValue(ref(db, `rooms/${currentRoom}/users`), (snapshot) => {
         const users = snapshot.val() || {};
-        updateUserList(users);
+        renderUserList(users);
 
-        for (let userId in users) {
+        Object.keys(users).forEach(userId => {
             if (userId !== myId && !peers[userId]) {
-                // If a new user joined who joined AFTER me, I call them
-                if (users[userId].joinedAt > users[myId].joinedAt) {
-                    initiatePeerConnection(userId, true);
-                } else {
-                    initiatePeerConnection(userId, false);
-                }
+                // If user is newer than me, I am the caller
+                const isCaller = users[userId].joinedAt > users[myId].joinedAt;
+                setupPeer(userId, isCaller);
             }
-        }
+        });
     });
 
-    // 4. Listen for signaling (Offers/Answers/ICE)
     listenForSignaling();
 };
 
-async function initiatePeerConnection(targetId, isCaller) {
+// --- WebRTC Peer Logic ---
+async function setupPeer(targetId, isCaller) {
     const pc = new RTCPeerConnection(servers);
     peers[targetId] = pc;
 
@@ -113,6 +132,7 @@ async function initiatePeerConnection(targetId, isCaller) {
             audio = document.createElement("audio");
             audio.id = `audio-${targetId}`;
             audio.autoplay = true;
+            audio.volume = isSpeakerOn ? 1.0 : 0.0;
             document.getElementById("remote-audios").appendChild(audio);
         }
         audio.srcObject = event.streams[0];
@@ -132,60 +152,64 @@ async function initiatePeerConnection(targetId, isCaller) {
 }
 
 function listenForSignaling() {
-    // Listen for offers sent TO me
     onValue(ref(db, `rooms/${currentRoom}/signals`), (snapshot) => {
-        const allSignals = snapshot.val() || {};
-
-        for (let senderId in allSignals) {
+        const signals = snapshot.val() || {};
+        for (let senderId in signals) {
             if (senderId === myId) continue;
-            
-            const mySignals = allSignals[senderId][myId];
-            if (!mySignals) continue;
+            const myIncoming = signals[senderId][myId];
+            if (!myIncoming) continue;
 
             const pc = peers[senderId];
-            if (!pc) return;
+            if (!pc) continue;
 
-            // Handle Offer
-            if (mySignals.offer && !pc.currentRemoteDescription) {
-                pc.setRemoteDescription(new RTCSessionDescription(mySignals.offer)).then(async () => {
+            if (myIncoming.offer && !pc.currentRemoteDescription) {
+                pc.setRemoteDescription(new RTCSessionDescription(myIncoming.offer)).then(async () => {
                     const answer = await pc.createAnswer();
                     await pc.setLocalDescription(answer);
                     set(ref(db, `rooms/${currentRoom}/signals/${myId}/${senderId}/answer`), { sdp: answer.sdp, type: answer.type });
                 });
             }
 
-            // Handle Answer
-            if (mySignals.answer && !pc.currentRemoteDescription) {
-                pc.setRemoteDescription(new RTCSessionDescription(mySignals.answer));
+            if (myIncoming.answer && !pc.currentRemoteDescription) {
+                pc.setRemoteDescription(new RTCSessionDescription(myIncoming.answer));
             }
 
-            // Handle ICE
-            if (mySignals.ice) {
-                Object.values(mySignals.ice).forEach(cand => {
-                    pc.addIceCandidate(new RTCIceCandidate(cand)).catch(() => {});
-                });
+            if (myIncoming.ice) {
+                Object.values(myIncoming.ice).forEach(cand => pc.addIceCandidate(new RTCIceCandidate(cand)).catch(()=>{}));
             }
         }
     });
 }
 
-function updateUserList(users) {
-    const container = document.getElementById("users");
-    container.innerHTML = "";
-    Object.keys(users).forEach(id => {
-        const span = document.createElement("span");
-        span.className = "user-tag";
-        span.innerText = id === myId ? "You" : "Stranger";
-        container.appendChild(span);
-    });
-}
-
+// --- Mic & Speaker Fixes ---
 window.toggleMute = () => {
     const track = myStream.getAudioTracks()[0];
     track.enabled = !track.enabled;
-    document.getElementById("muteBtn").innerText = track.enabled ? "Mute Mic" : "Unmute Mic";
-    document.getElementById("muteBtn").style.background = track.enabled ? "#0084ff" : "#555";
+    const btn = document.getElementById("muteBtn");
+    btn.innerText = track.enabled ? "🎤 Mic On" : "🔇 Mic Muted";
+    btn.style.background = track.enabled ? "#333" : "#f02849";
 };
+
+window.toggleSpeaker = () => {
+    isSpeakerOn = !isSpeakerOn;
+    const audios = document.querySelectorAll("audio");
+    audios.forEach(a => a.volume = isSpeakerOn ? 1.0 : 0.0);
+    
+    const btn = document.getElementById("speakerBtn");
+    btn.innerText = isSpeakerOn ? "🔊 Speaker On" : "🔈 Earpiece/Mute";
+    btn.style.background = isSpeakerOn ? "#333" : "#555";
+};
+
+function renderUserList(users) {
+    const container = document.getElementById("users-container");
+    container.innerHTML = "";
+    Object.keys(users).forEach(id => {
+        const div = document.createElement("div");
+        div.className = "user-row";
+        div.innerHTML = `<span><span class="status-dot"></span>${id === myId ? "You (Me)" : "Stranger " + id.split('-')[1]}</span>`;
+        container.appendChild(div);
+    });
+}
 
 window.leaveRoom = () => {
     location.reload();
