@@ -2,28 +2,44 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Stranger Group - Video Only</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Stranger Group - Screen Share</title>
     <style>
         :root { --bg: #0d1117; --card: #161b22; --border: #30363d; --primary: #238636; --danger: #da3633; --accent: #2f81f7; }
-        body { font-family: -apple-system, sans-serif; background: var(--bg); color: white; margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        
+        body { 
+            font-family: -apple-system, sans-serif; 
+            background: var(--bg); color: white; margin: 0; 
+            display: flex; flex-direction: column; 
+            height: 100vh; height: -webkit-fill-available;
+            overflow: hidden; 
+        }
 
-        /* Home Screen */
         #home-screen { position: fixed; inset: 0; background: var(--bg); z-index: 1000; display: flex; flex-direction: column; justify-content: center; align-items: center; }
         .mode-card { background: var(--card); padding: 30px; border-radius: 20px; border: 1px solid var(--border); text-align: center; width: 80%; max-width: 350px; }
 
-        /* Video Area */
         #main-container { display: flex; flex-direction: column; flex-grow: 1; overflow: hidden; position: relative; }
         #video-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; padding: 10px; overflow-y: auto; align-content: start; }
         .video-box { position: relative; background: #000; border-radius: 12px; overflow: hidden; aspect-ratio: 3/4; border: 1px solid var(--border); }
         video { width: 100%; height: 100%; object-fit: cover; }
 
-        /* Controls */
-        .controls { background: #161b22; padding: 10px 5px 25px 5px; display: flex; justify-content: center; gap: 8px; border-top: 1px solid var(--border); }
-        .btn { width: 52px; height: 52px; border-radius: 50%; border: none; cursor: pointer; background: #30363d; color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; font-size: 18px; }
-        .btn span { font-size: 8px; margin-top: 2px; }
+        .controls { 
+            background: #161b22; padding: 12px 10px;
+            padding-bottom: calc(12px + env(safe-area-inset-bottom)); 
+            display: flex; justify-content: center; gap: 8px; 
+            border-top: 1px solid var(--border); z-index: 1000;
+        }
+
+        .btn { 
+            width: 48px; height: 48px; border-radius: 50%; border: none; cursor: pointer; 
+            background: #30363d; color: white; display: flex; flex-direction: column; 
+            justify-content: center; align-items: center; font-size: 16px; flex-shrink: 0;
+        }
+
+        .btn span { font-size: 7px; margin-top: 2px; font-weight: bold; }
         .btn.off { background: var(--danger) !important; }
-        .btn-leave { background: var(--danger); width: 60px; border-radius: 12px; }
+        .btn.active-share { background: var(--primary) !important; }
+        .btn-leave { background: var(--danger); width: 55px; border-radius: 12px; }
 
         #chat-sidebar { position: absolute; inset: 0; background: var(--card); z-index: 500; display: none; flex-direction: column; }
         #chat-sidebar.open { display: flex; }
@@ -36,7 +52,6 @@
     <div id="home-screen">
         <div class="mode-card">
             <h2 style="margin-top:0">Stranger Video</h2>
-            <p style="color: #8b949e;">Meet people face-to-face</p>
             <button class="btn" style="width:100%; border-radius:12px; background:var(--accent); font-size: 1.1rem; height: 50px;" onclick="startApp()">📹 Start Video Chat</button>
         </div>
     </div>
@@ -45,19 +60,18 @@
         <div id="video-grid">
             <div class="video-box" id="localBox">
                 <video id="localVideo" autoplay muted playsinline></video>
-                <div style="position:absolute; bottom:5px; left:5px; font-size:10px; background:rgba(0,0,0,0.5); padding:2px 5px; border-radius:4px;">You</div>
             </div>
         </div>
 
         <div id="chat-sidebar">
             <div style="padding:15px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center;">
-                <span style="font-weight:bold;">Group Chat</span>
+                <span>Group Chat</span>
                 <button onclick="toggleChat()" style="background:#30363d; border:none; color:white; border-radius:50%; width:30px; height:30px;">✕</button>
             </div>
             <div id="messages" style="flex:1; overflow-y:auto; padding:15px; display:flex; flex-direction:column; gap:10px;"></div>
-            <div style="padding:10px; display:flex; gap:5px; border-top:1px solid var(--border); background:var(--card);">
-                <input type="text" id="msgInput" style="flex:1; padding:12px; border-radius:8px; border:none; background:#000; color:white;" placeholder="Type here...">
-                <button onclick="sendChat()" style="background:var(--accent); border:none; color:white; border-radius:8px; padding:0 15px; font-weight:bold;">Send</button>
+            <div style="padding:10px; display:flex; gap:5px; border-top:1px solid var(--border);">
+                <input type="text" id="msgInput" style="flex:1; padding:12px; border-radius:8px; border:none; background:#000; color:white;" placeholder="Message...">
+                <button onclick="sendChat()" style="background:var(--accent); border:none; color:white; border-radius:8px; padding:0 15px;">Send</button>
             </div>
         </div>
     </div>
@@ -65,6 +79,7 @@
     <div id="actionButtons" class="controls hidden">
         <button id="micBtn" class="btn" onclick="toggleMic()">🎤<span>Mic</span></button>
         <button id="camBtn" class="btn" onclick="toggleCam()">📷<span>Cam</span></button>
+        <button id="shareBtn" class="btn" onclick="toggleScreenShare()">📺<span>Share</span></button>
         <button id="flipBtn" class="btn" onclick="flipCamera()">🔄<span>Flip</span></button>
         <button id="chatBtn" class="btn" onclick="toggleChat()">💬<span>Chat</span></button>
         <button class="btn btn-leave" onclick="location.reload()">✖<span>Exit</span></button>
@@ -85,65 +100,84 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const userId = 'User-' + Math.floor(Math.random() * 9000);
 const iceServers = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+let localStream, screenStream, currentRoomId, peers = {}, currentFacingMode = "user", isSharing = false;
 
-let localStream, currentRoomId, peers = {}, currentFacingMode = "user";
-
-// Fix for black screen (Auto-play logic)
 const setupVideo = (videoEl, stream) => {
     videoEl.srcObject = stream;
-    videoEl.onloadedmetadata = () => {
-        videoEl.play().catch(e => console.error("Play error:", e));
-    };
+    videoEl.onloadedmetadata = () => { videoEl.play().catch(e => {}); };
 };
 
 window.startApp = async () => {
     try {
-        localStream = await navigator.mediaDevices.getUserMedia({ 
-            audio: true, 
-            video: { facingMode: currentFacingMode } 
-        });
+        localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: { facingMode: currentFacingMode } });
         setupVideo(document.getElementById("localVideo"), localStream);
-        
         document.getElementById("home-screen").style.display = "none";
         document.getElementById("actionButtons").classList.remove("hidden");
         findRoom();
     } catch (e) { alert("Camera Access Denied!"); }
 };
 
-window.flipCamera = async () => {
-    if (!localStream) return;
-    const oldTrack = localStream.getVideoTracks()[0];
-    currentFacingMode = currentFacingMode === "user" ? "environment" : "user";
-    
-    const newStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacingMode } });
-    const newTrack = newStream.getVideoTracks()[0];
+window.toggleScreenShare = async () => {
+    try {
+        if (!isSharing) {
+            screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+            const screenTrack = screenStream.getVideoTracks()[0];
+            
+            replaceVideoTrack(screenTrack);
+            setupVideo(document.getElementById("localVideo"), screenStream);
+            
+            screenTrack.onended = () => stopSharing();
+            document.getElementById("shareBtn").classList.add("active-share");
+            isSharing = true;
+        } else {
+            stopSharing();
+        }
+    } catch (e) { console.error("Screen share failed", e); }
+};
 
-    localStream.removeTrack(oldTrack);
-    oldTrack.stop();
-    localStream.addTrack(newTrack);
-    
-    document.getElementById("localVideo").srcObject = localStream;
+async function stopSharing() {
+    if (screenStream) {
+        screenStream.getTracks().forEach(track => track.stop());
+    }
+    const videoTrack = localStream.getVideoTracks()[0];
+    replaceVideoTrack(videoTrack);
+    setupVideo(document.getElementById("localVideo"), localStream);
+    document.getElementById("shareBtn").classList.remove("active-share");
+    isSharing = false;
+}
 
+function replaceVideoTrack(newTrack) {
     Object.values(peers).forEach(pc => {
         const sender = pc.getSenders().find(s => s.track.kind === 'video');
         if (sender) sender.replaceTrack(newTrack);
     });
+}
+
+window.flipCamera = async () => {
+    if (isSharing) return alert("Stop sharing to flip camera");
+    const oldTrack = localStream.getVideoTracks()[0];
+    currentFacingMode = currentFacingMode === "user" ? "environment" : "user";
+    const newStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacingMode } });
+    const newTrack = newStream.getVideoTracks()[0];
+    localStream.removeTrack(oldTrack);
+    oldTrack.stop();
+    localStream.addTrack(newTrack);
+    document.getElementById("localVideo").srcObject = localStream;
+    replaceVideoTrack(newTrack);
 };
 
+// ... Rest of your existing Firebase/Peer logic remains exactly the same ...
 async function findRoom() {
     const snap = await get(ref(db, 'rooms'));
     const rooms = snap.val() || {};
     currentRoomId = Object.keys(rooms).find(id => Object.keys(rooms[id].users || {}).length < 4) || 'Room-' + Date.now();
-    
     await set(ref(db, `rooms/${currentRoomId}/users/${userId}`), { id: userId });
     onDisconnect(ref(db, `rooms/${currentRoomId}/users/${userId}`)).remove();
-
     onChildAdded(ref(db, `rooms/${currentRoomId}/users`), (s) => { if(s.key !== userId) createPeer(s.key, true); });
     onChildRemoved(ref(db, `rooms/${currentRoomId}/users`), (s) => {
         if(peers[s.key]) { peers[s.key].close(); delete peers[s.key]; document.getElementById(`box-${s.key}`)?.remove(); }
     });
     onChildAdded(ref(db, `rooms/${currentRoomId}/chat`), (s) => addMsg(s.val()));
-
     onChildAdded(ref(db, `rooms/${currentRoomId}/signals/${userId}`), async (s) => {
         const d = s.val(); if(!peers[d.from]) createPeer(d.from, false);
         const pc = peers[d.from];
@@ -161,19 +195,14 @@ async function findRoom() {
 function createPeer(rid, isCaller) {
     const pc = new RTCPeerConnection(iceServers); peers[rid] = pc;
     localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
-    
-    pc.onicecandidate = (e) => { 
-        if(e.candidate) push(ref(db, `rooms/${currentRoomId}/signals/${rid}`), { from:userId, candidate:e.candidate.toJSON() }); 
-    };
-
+    pc.onicecandidate = (e) => { if(e.candidate) push(ref(db, `rooms/${currentRoomId}/signals/${rid}`), { from:userId, candidate:e.candidate.toJSON() }); };
     pc.ontrack = (e) => {
         if(document.getElementById(`vid-${rid}`)) return;
         const box = document.createElement("div"); box.className = "video-box"; box.id = `box-${rid}`;
-        box.innerHTML = `<video id="vid-${rid}" autoplay playsinline></video><div style="position:absolute; bottom:5px; left:5px; font-size:10px; background:rgba(0,0,0,0.5); padding:2px 5px; border-radius:4px;">Stranger</div>`;
+        box.innerHTML = `<video id="vid-${rid}" autoplay playsinline></video>`;
         document.getElementById("video-grid").appendChild(box);
         setupVideo(document.getElementById(`vid-${rid}`), e.streams[0]);
     };
-
     if(isCaller) {
         pc.onnegotiationneeded = async () => {
             const off = await pc.createOffer(); await pc.setLocalDescription(off);
@@ -197,7 +226,7 @@ window.sendChat = () => {
 };
 function addMsg(d) {
     const div = document.createElement("div");
-    div.style.cssText = `padding:10px 14px; border-radius:15px; max-width:80%; line-height:1.4; font-size:14px; ${d.user === userId ? 'align-self:flex-end; background:var(--accent);' : 'align-self:flex-start; background:var(--border);'}`;
+    div.style.cssText = `padding:10px; border-radius:10px; max-width:80%; ${d.user === userId ? 'align-self:flex-end; background:var(--accent);' : 'align-self:flex-start; background:var(--border);'}`;
     div.innerText = d.text; document.getElementById("messages").appendChild(div);
     document.getElementById("messages").scrollTop = document.getElementById("messages").scrollHeight;
 }
