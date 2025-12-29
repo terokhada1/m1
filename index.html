@@ -3,66 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Group Stranger Chat</title>
+    <title>Stranger Group Chat - Debug Mode</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #1a1a1a; color: white; margin: 0; padding: 20px; }
-        .container { max-width: 1000px; margin: auto; }
+        body { font-family: sans-serif; background: #0b0e14; color: white; text-align: center; margin: 0; padding: 20px; }
+        #video-grid { display: grid; grid-template-columns: 1fr; gap: 10px; max-width: 500px; margin: auto; }
+        .video-box { background: #1c212c; border-radius: 15px; overflow: hidden; aspect-ratio: 4/3; position: relative; border: 1px solid #30363d; }
+        video { width: 100%; height: 100%; object-fit: cover; background: #000; }
+        .label { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.5); padding: 4px 10px; border-radius: 5px; font-size: 12px; }
         
-        /* Video Grid Logic */
-        #video-grid { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
-            gap: 15px; 
-            margin-bottom: 20px; 
-        }
-        .video-wrapper { position: relative; background: #000; border-radius: 10px; overflow: hidden; aspect-ratio: 4/3; }
-        video { width: 100%; height: 100%; object-fit: cover; }
-        .label { position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 4px; font-size: 12px; }
-
-        #chatSection { background: #252525; border-radius: 10px; height: 300px; display: flex; flex-direction: column; }
-        #messages { flex: 1; overflow-y: auto; padding: 15px; font-size: 14px; }
-        .controls { margin-top: 20px; display: flex; gap: 10px; justify-content: center; }
-        
-        button { padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        .btn-start { background: #0084ff; color: white; }
-        .btn-next { background: #f02849; color: white; }
-        .btn-toggle { background: #444; color: white; }
+        /* Debug Console */
+        #debug-log { background: #000; color: #0f0; font-family: monospace; font-size: 10px; padding: 10px; height: 100px; overflow-y: auto; text-align: left; margin-top: 20px; border: 1px solid #333; }
+        .btn { padding: 15px 40px; border-radius: 30px; border: none; background: #238636; color: white; font-weight: bold; cursor: pointer; margin-top: 20px; }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Random Group Video Chat</h2>
-    <div id="callStatus">Status: Ready</div>
-
+    <h3>Stranger Group Chat</h3>
     <div id="video-grid">
-        <div class="video-wrapper">
+        <div class="video-box">
             <video id="localVideo" autoplay muted playsinline></video>
             <div class="label">You</div>
         </div>
     </div>
 
-    <div id="chatSection">
-        <div id="messages"></div>
-        <div style="display:flex; padding: 10px;">
-            <input type="text" id="chatInput" style="flex:1; padding: 8px;" placeholder="Type message...">
-            <button onclick="sendGroupMsg()">Send</button>
-        </div>
-    </div>
+    <button id="joinBtn" class="btn" onclick="startApp()">Join Chat</button>
 
-    <div class="controls">
-        <button id="startBtn" class="btn-start" onclick="joinRandomGroup()">Join Random Group</button>
-        <button class="btn-next" onclick="location.reload()">Leave/Next</button>
-        <button class="btn-toggle" onclick="toggleCam()">Toggle Cam</button>
-    </div>
-</div>
+    <div id="debug-log">System: Ready. Press Join.</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getDatabase, ref, set, onValue, push, get, onChildAdded, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
+import { getDatabase, ref, set, push, onChildAdded, get, onDisconnect } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
 const firebaseConfig = {
-    // ... PASTE YOUR CONFIG HERE ...
     apiKey: "AIzaSyDQDrOlYu4GFuba1v1PJGlyLSIEm6Li6No",
     authDomain: "bongocall-cad70.firebaseapp.com",
     databaseURL: "https://bongocall-cad70-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -71,79 +43,86 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-const userId = 'user-' + Math.floor(Math.random() * 100000);
-let localStream, currentRoomId;
-const peers = {}; // Holds RTCPeerConnection for each person in room
+const userId = 'user-' + Math.floor(Math.random() * 9000);
+const iceServers = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }, { urls: "stun:stun1.l.google.com:19302" }] };
+let localStream, currentRoomId, peers = {};
 
-const iceServers = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+function log(msg) {
+    const console = document.getElementById("debug-log");
+    console.innerHTML += `<br>> ${msg}`;
+    console.scrollTop = console.scrollHeight;
+}
 
-window.joinRandomGroup = async () => {
-    document.getElementById("startBtn").disabled = true;
-    
-    // 1. Get Camera
-    localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-    document.getElementById("localVideo").srcObject = localStream;
-
-    // 2. Find or Create Room (Max 4 people)
-    const roomsRef = ref(db, 'rooms');
-    const snapshot = await get(roomsRef);
-    const rooms = snapshot.val() || {};
-    
-    currentRoomId = Object.keys(rooms).find(id => Object.keys(rooms[id].users || {}).length < 4) 
-                   || 'room-' + Math.floor(Math.random() * 9999);
-
-    // 3. Register self in room
-    const userRef = ref(db, `rooms/${currentRoomId}/users/${userId}`);
-    set(userRef, { id: userId, joinedAt: Date.now() });
-    onDisconnect(userRef).remove();
-
-    listenForOthers();
+window.startApp = async () => {
+    try {
+        log("Requesting Camera...");
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        document.getElementById("localVideo").srcObject = localStream;
+        document.getElementById("joinBtn").style.display = "none";
+        log("Camera OK. Finding room...");
+        joinRoom();
+    } catch (e) {
+        log("ERROR: Camera denied or not found!");
+        alert("Please allow Camera and Mic permission!");
+    }
 };
 
-function listenForOthers() {
-    const othersRef = ref(db, `rooms/${currentRoomId}/users`);
-    onChildAdded(othersRef, (snapshot) => {
-        const strangerId = snapshot.key;
-        if (strangerId !== userId) {
-            initiatePeerConnection(strangerId, true);
+async function joinRoom() {
+    const roomsRef = ref(db, 'rooms');
+    const snap = await get(roomsRef);
+    const rooms = snap.val() || {};
+
+    // Find a room with space
+    currentRoomId = Object.keys(rooms).find(id => Object.keys(rooms[id].users || {}).length < 4) || 'room-' + Math.floor(Math.random() * 99);
+    
+    log(`Joining Room: ${currentRoomId}`);
+    const userRef = ref(db, `rooms/${currentRoomId}/users/${userId}`);
+    set(userRef, { id: userId });
+    onDisconnect(userRef).remove();
+
+    // Listen for others
+    onChildAdded(ref(db, `rooms/${currentRoomId}/users`), (s) => {
+        if (s.key !== userId) {
+            log(`Stranger found: ${s.key}. Connecting...`);
+            initiatePeer(s.key, true);
         }
     });
 
-    // Listen for signaling data
-    onChildAdded(ref(db, `rooms/${currentRoomId}/signals/${userId}`), async (snapshot) => {
-        const { from, type, sdp, candidate } = snapshot.val();
-        if (!peers[from]) initiatePeerConnection(from, false);
-
-        if (type === 'offer') {
-            await peers[from].setRemoteDescription(new RTCSessionDescription({type, sdp}));
-            const answer = await peers[from].createAnswer();
-            await peers[from].setLocalDescription(answer);
-            push(ref(db, `rooms/${currentRoomId}/signals/${from}`), { from: userId, type: 'answer', sdp: answer.sdp });
-        } else if (type === 'answer') {
-            await peers[from].setRemoteDescription(new RTCSessionDescription({type, sdp}));
-        } else if (candidate) {
-            peers[from].addIceCandidate(new RTCIceCandidate(candidate));
-        }
+    // Listen for signals
+    onChildAdded(ref(db, `rooms/${currentRoomId}/signals/${userId}`), async (s) => {
+        const data = s.val();
+        if (!peers[data.from]) initiatePeer(data.from, false);
+        
+        try {
+            if (data.type === 'offer') {
+                await peers[data.from].setRemoteDescription(new RTCSessionDescription(data));
+                const ans = await peers[data.from].createAnswer();
+                await peers[data.from].setLocalDescription(ans);
+                push(ref(db, `rooms/${currentRoomId}/signals/${data.from}`), { from: userId, type: 'answer', sdp: ans.sdp });
+            } else if (data.type === 'answer') {
+                await peers[data.from].setRemoteDescription(new RTCSessionDescription(data));
+            } else if (data.candidate) {
+                await peers[data.from].addIceCandidate(new RTCIceCandidate(data.candidate));
+            }
+        } catch (err) { log("Signaling Error: " + err.message); }
     });
 }
 
-async function initiatePeerConnection(remoteId, isCaller) {
+function initiatePeer(remoteId, isCaller) {
     if (peers[remoteId]) return;
-
     const pc = new RTCPeerConnection(iceServers);
     peers[remoteId] = pc;
 
-    localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
 
     pc.ontrack = (e) => {
-        if (document.getElementById(`video-${remoteId}`)) return;
-        const container = document.getElementById("video-grid");
-        const wrapper = document.createElement("div");
-        wrapper.className = "video-wrapper";
-        wrapper.id = `video-wrapper-${remoteId}`;
-        wrapper.innerHTML = `<video id="video-${remoteId}" autoplay playsinline></video><div class="label">Stranger</div>`;
-        container.appendChild(wrapper);
-        document.getElementById(`video-${remoteId}`).srcObject = e.streams[0];
+        log("SUCCESS: Stranger video track received!");
+        if (document.getElementById(`vid-${remoteId}`)) return;
+        const box = document.createElement("div");
+        box.className = "video-box";
+        box.innerHTML = `<video id="vid-${remoteId}" autoplay playsinline></video><div class="label">Stranger</div>`;
+        document.getElementById("video-grid").appendChild(box);
+        document.getElementById(`vid-${remoteId}`).srcObject = e.streams[0];
     };
 
     pc.onicecandidate = (e) => {
@@ -151,26 +130,13 @@ async function initiatePeerConnection(remoteId, isCaller) {
     };
 
     if (isCaller) {
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        push(ref(db, `rooms/${currentRoomId}/signals/${remoteId}`), { from: userId, type: 'offer', sdp: offer.sdp });
+        pc.onnegotiationneeded = async () => {
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            push(ref(db, `rooms/${currentRoomId}/signals/${remoteId}`), { from: userId, type: 'offer', sdp: offer.sdp });
+        };
     }
 }
-
-window.toggleCam = () => {
-    const videoTrack = localStream.getVideoTracks()[0];
-    videoTrack.enabled = !videoTrack.enabled;
-};
-
-// Simplified chat for groups
-window.sendGroupMsg = () => {
-    const text = document.getElementById("chatInput").value;
-    push(ref(db, `rooms/${currentRoomId}/chat`), { user: userId, text });
-    document.getElementById("chatInput").value = "";
-};
-
-// Listen for group chat messages
-// (Add onValue for `rooms/${currentRoomId}/chat` similar to your previous code)
 </script>
 </body>
 </html>
