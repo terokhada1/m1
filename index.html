@@ -16,8 +16,8 @@ button:active { box-shadow: 0 2px #666; transform: translateY(2px); }
 video { border-radius: 10px; margin-top: 10px; max-width: 100%; }
 #localVideo { width: 120px; height: 160px; position: absolute; top: 20px; right: 20px; border: 2px solid #333; }
 #userList { margin-top: 20px; background: #fff; padding: 10px; border-radius: 10px; max-height:200px; overflow-y:auto; }
-.userItem { padding: 8px; border-bottom: 1px solid #ddd; cursor: pointer; }
-.userItem:hover { background: #f0f0f0; }
+.userItem { padding: 8px; border-bottom: 1px solid #ddd; cursor: default; display: flex; justify-content: space-between; align-items: center;}
+.userItem button { padding: 5px 10px; font-size:14px;}
 </style>
 </head>
 <body>
@@ -32,7 +32,7 @@ video { border-radius: 10px; margin-top: 10px; max-width: 100%; }
 
 <div id="incomingCall">
   <h3>Incoming Call from <span id="incomingCaller">Unknown</span></h3>
-  <button onclick="acceptCall()">✅ Accept</button>
+  <button id="joinCallBtn" onclick="acceptCall()">✅ Join Call</button>
   <button onclick="rejectCall()">❌ Reject</button>
 </div>
 
@@ -48,8 +48,6 @@ video { border-radius: 10px; margin-top: 10px; max-width: 100%; }
 <video id="localVideo" autoplay muted playsinline></video>
 <audio id="ringtone" src="https://actions.google.com/sounds/v1/alarms/phone_alerts_and_rings.ogg" loop></audio>
 <div id="callStatus">Call Status: None</div>
-
-<input type="hidden" id="targetId">
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
@@ -98,32 +96,29 @@ function startTimer() {
 }
 function stopTimer(){ clearInterval(timerInterval); }
 
-// Go Online and listen to users
+// Register User
 window.registerUser = ()=>{
   const name=document.getElementById("username").value||"Unknown";
   set(ref(db,"users/"+userId),{name,online:true});
   onDisconnect(ref(db,"users/"+userId)).remove();
 
+  // Show online users
   onValue(ref(db,"users"), snap=>{
     const users = snap.val()||{};
     userListDiv.innerHTML='';
     for(const id in users){
       if(id===userId) continue;
-      const div=document.createElement("div");
+      const div = document.createElement("div");
       div.className="userItem";
-      div.textContent=users[id].name+" ("+id+")";
-      div.onclick=()=>document.getElementById("targetId").value=id;
+      div.innerHTML = `<span>${users[id].name} (${id})</span> <button onclick="startCallTo('${id}')">📞 Call</button>`;
       userListDiv.appendChild(div);
     }
   });
 };
 
-// Start Call
-window.startCall = async ()=>{
-  const targetId=document.getElementById("targetId").value;
+// Start call to a user
+window.startCallTo = async (targetId)=>{
   const name=document.getElementById("username").value||"Unknown";
-  if(!targetId){ alert("Select user to call"); return; }
-
   localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
   localVideo.srcObject=localStream;
 
@@ -141,7 +136,7 @@ window.startCall = async ()=>{
   document.getElementById("callStatus").innerText="Calling "+targetId;
 };
 
-// Listen for incoming calls
+// Incoming call listener
 onValue(ref(db,"calls"), snap=>{
   const calls = snap.val()||{};
   for(const key in calls){
@@ -155,7 +150,7 @@ onValue(ref(db,"calls"), snap=>{
   }
 });
 
-// Accept Call
+// Accept call
 window.acceptCall=async ()=>{
   document.getElementById("incomingCall").style.display="none";
   ringtone.pause(); ringtone.currentTime=0;
@@ -186,23 +181,21 @@ window.acceptCall=async ()=>{
   });
 };
 
-// Reject Call
+// Reject call
 window.rejectCall=()=>{ if(callId) remove(ref(db,"calls/"+callId)); document.getElementById("incomingCall").style.display="none"; ringtone.pause(); ringtone.currentTime=0; alert("Call Rejected"); };
 
-// End Call
+// End call
 window.endCall=()=>{ if(peer) peer.close(); if(callId) remove(ref(db,"calls/"+callId)); stopTimer(); document.getElementById("callControls").style.display="none"; document.getElementById("callStatus").innerText="Call Ended"; };
 
 // Mute
 window.toggleMute=()=>{ if(!localStream) return; localStream.getAudioTracks().forEach(track=>track.enabled=isMuted); isMuted=!isMuted; document.getElementById("muteBtn").innerText=isMuted?"🎤 Unmute":"🎤 Mute"; };
 
-// Video
+// Video toggle
 window.toggleVideo=()=>{ if(!localStream) return; localStream.getVideoTracks().forEach(track=>track.enabled=isVideoOn); isVideoOn=!isVideoOn; document.getElementById("videoBtn").innerText=isVideoOn?"📹 Video Off":"📹 Video On"; };
 
-// Speaker
-window.toggleSpeaker=async()=>{ isSpeakerOn=!isSpeakerOn; remoteVideo.volume=isSpeakerOn?1:0; document.getElementById("speakerBtn").innerText=isSpeakerOn?"🔊 Speaker":"🔇 Speaker"; };
+// Speaker toggle
+window.toggleSpeaker=()=>{ isSpeakerOn=!isSpeakerOn; remoteVideo.volume=isSpeakerOn?1:0; document.getElementById("speakerBtn").innerText=isSpeakerOn?"🔊 Speaker":"🔇 Speaker"; };
 
 </script>
-
-<input type="hidden" id="targetId">
 </body>
 </html>
