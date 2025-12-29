@@ -3,22 +3,29 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mobile Audio Call</title>
+<title>Mobile + Web Audio Call</title>
 <style>
-  body { font-family: sans-serif; text-align: center; padding: 20px; }
-  button { padding: 15px 25px; font-size: 18px; margin: 10px; border-radius: 10px; }
-  h2 { font-size: 24px; margin-bottom: 20px; }
+body { font-family: sans-serif; text-align: center; padding: 20px; }
+button { padding: 15px 25px; font-size: 18px; margin: 10px; border-radius: 10px; }
+h2 { font-size: 24px; margin-bottom: 20px; }
+#callStatus { font-size: 20px; margin-top: 20px; }
 </style>
 </head>
 <body>
 
-<h2>📞 Mobile Audio Call</h2>
+<h2>📞 Audio Call System</h2>
 
-<button onclick="startCall()">Call</button>
-<button onclick="endCall()">End</button>
-
+<label for="username">Your Name:</label>
+<input type="text" id="username" placeholder="Enter your name">
 <br><br>
+
+<button onclick="startCall()">Start Call</button>
+<button onclick="endCall()">End Call</button>
+
 <audio id="remoteAudio" autoplay playsinline></audio>
+
+<div id="callStatus">Call Status: None</div>
+<div id="callerInfo">Caller: None</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
@@ -45,11 +52,16 @@ const peer = new RTCPeerConnection({
 
 let localStream;
 
+// 🌟 Update Call Status
+function updateStatus(status, callerName="") {
+  set(ref(db, "call/status"), status);
+  set(ref(db, "call/caller"), callerName);
+}
+
 // 🎤 Start Call
 window.startCall = async () => {
-  // Mobile browser requires user interaction
+  const username = document.getElementById("username").value || "Unknown";
   localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
   localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
 
   peer.ontrack = e => {
@@ -67,6 +79,7 @@ window.startCall = async () => {
   const offer = await peer.createOffer();
   await peer.setLocalDescription(offer);
   set(ref(db, "call/offer"), offer);
+  updateStatus("calling", username);
 };
 
 // 📞 Receive Offer
@@ -74,7 +87,6 @@ onValue(ref(db, "call/offer"), async snap => {
   if (!snap.exists()) return;
 
   await peer.setRemoteDescription(snap.val());
-
   const answer = await peer.createAnswer();
   await peer.setLocalDescription(answer);
   set(ref(db, "call/answer"), answer);
@@ -93,10 +105,24 @@ onValue(ref(db, "call/candidates"), snap => {
   });
 });
 
+// 📊 Show live call status on Web
+onValue(ref(db, "call/status"), snap => {
+  const status = snap.val() || "None";
+  document.getElementById("callStatus").innerText = "Call Status: " + status;
+});
+
+// 📊 Show who is calling
+onValue(ref(db, "call/caller"), snap => {
+  const caller = snap.val() || "None";
+  document.getElementById("callerInfo").innerText = "Caller: " + caller;
+});
+
 // ❌ End Call
 window.endCall = () => {
   peer.close();
   remove(ref(db, "call"));
+  document.getElementById("callStatus").innerText = "Call Status: Ended";
+  document.getElementById("callerInfo").innerText = "Caller: None";
   alert("Call Ended");
 };
 </script>
