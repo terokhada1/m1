@@ -1,11 +1,18 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Audio Call</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mobile Audio Call</title>
+<style>
+  body { font-family: sans-serif; text-align: center; padding: 20px; }
+  button { padding: 15px 25px; font-size: 18px; margin: 10px; border-radius: 10px; }
+  h2 { font-size: 24px; margin-bottom: 20px; }
+</style>
 </head>
 <body>
 
-<h2>🎧 Audio Call</h2>
+<h2>📞 Mobile Audio Call</h2>
 
 <button onclick="startCall()">Call</button>
 <button onclick="endCall()">End</button>
@@ -14,11 +21,10 @@
 <audio id="remoteAudio" autoplay playsinline></audio>
 
 <script type="module">
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
 import { getDatabase, ref, set, onValue, push, remove } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
-// 🔥 Firebase config
+// 🔥 Firebase Config
 const firebaseConfig = {
   apiKey: "AIzaSyDQDrOlYu4GFuba1v1PJGlyLSIEm6Li6No",
   authDomain: "bongocall-cad70.firebaseapp.com",
@@ -32,7 +38,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// 🔊 WebRTC
+// 🌐 WebRTC setup
 const peer = new RTCPeerConnection({
   iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
 });
@@ -41,6 +47,7 @@ let localStream;
 
 // 🎤 Start Call
 window.startCall = async () => {
+  // Mobile browser requires user interaction
   localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
   localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
@@ -86,13 +93,13 @@ onValue(ref(db, "call/candidates"), snap => {
   });
 });
 
-// ❌ End call
+// ❌ End Call
 window.endCall = () => {
   peer.close();
   remove(ref(db, "call"));
-  alert("Call ended");
+  alert("Call Ended");
 };
-
 </script>
+
 </body>
 </html>
