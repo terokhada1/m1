@@ -1,61 +1,62 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="bn">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Group Voice Room</title>
+    <title>ভয়েস ও ভিডিও রুম</title>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #121212; color: white; display: flex; flex-direction: column; align-items: center; padding: 20px; }
-        .container { width: 100%; max-width: 450px; background: #1e1e1e; padding: 25px; border-radius: 15px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); text-align: center; }
+        body { font-family: 'Segoe UI', sans-serif; background: #0f172a; color: white; display: flex; flex-direction: column; align-items: center; padding: 15px; margin: 0; }
+        .container { width: 100%; max-width: 500px; background: #1e293b; padding: 20px; border-radius: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); text-align: center; margin-top: 20px; }
         
-        input { width: 80%; padding: 12px; margin: 15px 0; border-radius: 8px; border: 1px solid #333; background: #2b2b2b; color: white; font-size: 16px; }
+        #video-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        video { width: 100%; border-radius: 12px; background: #000; object-fit: cover; height: 150px; display: none; border: 2px solid #334155; }
+        #localVideo { border-color: #0ea5e9; }
+
+        input { width: 85%; padding: 12px; margin-bottom: 15px; border-radius: 10px; border: none; background: #334155; color: white; font-size: 16px; outline: none; }
         
-        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
-        button { padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
+        button { padding: 12px; border: none; border-radius: 10px; cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 14px; color: white; }
         
-        .btn-join { background: #0084ff; color: white; width: 100%; font-size: 16px; }
-        .btn-mute { background: #333; color: white; }
-        .btn-speaker { background: #333; color: white; }
-        .btn-leave { background: #f02849; color: white; grid-column: span 2; margin-top: 10px; }
-        
-        #participant-list { margin-top: 25px; text-align: left; background: #252525; padding: 15px; border-radius: 10px; min-height: 100px; }
-        .user-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #333; }
-        .status-dot { height: 10px; width: 10px; background: #31a24c; border-radius: 50%; display: inline-block; margin-right: 8px; }
-        
-        .active-speaker { border-left: 3px solid #0084ff; padding-left: 10px; transition: 0.3s; }
+        .btn-join { background: #0ea5e9; width: 100%; font-size: 16px; }
+        .btn-tool { background: #475569; }
+        .btn-danger { background: #ef4444; grid-column: span 2; margin-top: 10px; }
+        .active-tool { background: #0ea5e9; }
+
+        #user-list { text-align: left; background: #0f172a; padding: 10px; border-radius: 10px; margin-top: 15px; font-size: 13px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h2>🎙️ Voice Lobby</h2>
+    <h2 style="color: #0ea5e9; margin-bottom: 5px;">ভয়েস ও ভিডিও রুম</h2>
     
-    <div id="login-screen">
-        <input type="text" id="roomInput" placeholder="Enter Room Name...">
-        <button class="btn-join" onclick="joinRoom()">Join Group Call</button>
+    <div id="setup-screen">
+        <input type="text" id="roomInput" placeholder="রুমের নাম লিখুন...">
+        <button class="btn-join" onclick="joinRoom()">রুমে প্রবেশ করুন</button>
     </div>
 
     <div id="call-screen" style="display: none;">
-        <p id="room-display" style="color: #0084ff; font-weight: bold;"></p>
-        
-        <div id="participant-list">
-            <small style="color: #888;">Participants</small>
-            <div id="users-container"></div>
-        </div>
+        <div id="video-grid">
+            <video id="localVideo" autoplay muted playsinline></video>
+            </div>
+
+        <div id="user-list">অংশগ্রহণকারী: <span id="user-count">১</span> জন</div>
 
         <div class="controls">
-            <button id="muteBtn" class="btn-mute" onclick="toggleMute()">🎤 Mic On</button>
-            <button id="speakerBtn" class="btn-speaker" onclick="toggleSpeaker()">🔊 Speaker On</button>
-            <button class="btn-leave" onclick="leaveRoom()">❌ Leave Room</button>
+            <button id="muteBtn" class="btn-tool" onclick="toggleMute()">🎤 মাইক চালু</button>
+            <button id="camBtn" class="btn-tool" onclick="toggleCamera()">📷 ক্যামেরা বন্ধ</button>
+            <button id="speakerBtn" class="btn-tool" onclick="toggleSpeaker()">🔊 স্পিকার চালু</button>
+            <button class="btn-tool" onclick="location.reload()">🔄 রিফ্রেশ</button>
+            <button class="btn-danger" onclick="leaveRoom()">❌ কল শেষ করুন</button>
         </div>
     </div>
 </div>
 
-<div id="remote-audios" style="display:none;"></div>
+<div id="remote-media-container"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getDatabase, ref, set, onValue, push, remove, onDisconnect, get } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
+import { getDatabase, ref, set, onValue, push, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyDQDrOlYu4GFuba1v1PJGlyLSIEm6Li6No",
@@ -69,49 +70,36 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+const myId = 'u-' + Math.floor(Math.random() * 10000);
 
-const myId = 'user-' + Math.floor(Math.random() * 10000);
-let myStream;
-let peers = {}; 
-let isSpeakerOn = true;
-let currentRoom = null;
+let myStream, currentRoom, peers = {}, isCamOn = false;
 
 const servers = { iceServers: [{ urls: ["stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19302"] }] };
 
-// --- Join Room Logic ---
 window.joinRoom = async () => {
-    const roomName = document.getElementById("roomInput").value.trim().toLowerCase();
-    if (!roomName) return alert("Please enter a room name");
-    
-    currentRoom = roomName;
+    const room = document.getElementById("roomInput").value.trim().toLowerCase();
+    if (!room) return alert("রুমের নাম দিন");
+    currentRoom = room;
 
-    try {
-        myStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-    } catch (e) {
-        alert("Microphone access is required for group calls.");
-        return;
-    }
+    // অডিও এবং ভিডিও পারমিশন (ক্যামেরা ডিফল্ট অফ থাকবে)
+    myStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+    document.getElementById("localVideo").srcObject = myStream;
+    myStream.getVideoTracks().forEach(t => t.enabled = false); // শুরুতে ক্যামেরা অফ
 
-    // UI Updates
-    document.getElementById("login-screen").style.display = "none";
+    document.getElementById("setup-screen").style.display = "none";
     document.getElementById("call-screen").style.display = "block";
-    document.getElementById("room-display").innerText = "ROOM: " + currentRoom;
 
-    // Presence
-    const userRef = ref(db, `rooms/${currentRoom}/users/${myId}`);
-    set(userRef, { id: myId, joinedAt: Date.now() });
-    onDisconnect(userRef).remove();
+    const myRef = ref(db, `rooms/${currentRoom}/users/${myId}`);
+    set(myRef, { id: myId, joinedAt: Date.now() });
+    onDisconnect(myRef).remove();
 
-    // Listen for users
-    onValue(ref(db, `rooms/${currentRoom}/users`), (snapshot) => {
-        const users = snapshot.val() || {};
-        renderUserList(users);
-
-        Object.keys(users).forEach(userId => {
-            if (userId !== myId && !peers[userId]) {
-                // If user is newer than me, I am the caller
-                const isCaller = users[userId].joinedAt > users[myId].joinedAt;
-                setupPeer(userId, isCaller);
+    onValue(ref(db, `rooms/${currentRoom}/users`), snap => {
+        const users = snap.val() || {};
+        document.getElementById("user-count").innerText = Object.keys(users).length;
+        Object.keys(users).forEach(uid => {
+            if (uid !== myId && !peers[uid]) {
+                const isCaller = users[uid].joinedAt > users[myId].joinedAt;
+                setupPeer(uid, isCaller);
             }
         });
     });
@@ -119,7 +107,6 @@ window.joinRoom = async () => {
     listenForSignaling();
 };
 
-// --- WebRTC Peer Logic ---
 async function setupPeer(targetId, isCaller) {
     const pc = new RTCPeerConnection(servers);
     peers[targetId] = pc;
@@ -127,21 +114,20 @@ async function setupPeer(targetId, isCaller) {
     myStream.getTracks().forEach(track => pc.addTrack(track, myStream));
 
     pc.ontrack = (event) => {
-        let audio = document.getElementById(`audio-${targetId}`);
-        if (!audio) {
-            audio = document.createElement("audio");
-            audio.id = `audio-${targetId}`;
-            audio.autoplay = true;
-            audio.volume = isSpeakerOn ? 1.0 : 0.0;
-            document.getElementById("remote-audios").appendChild(audio);
+        let v = document.getElementById(`vid-${targetId}`);
+        if (!v) {
+            v = document.createElement("video");
+            v.id = `vid-${targetId}`;
+            v.autoplay = true;
+            v.playsinline = true;
+            v.style.display = "block"; // অডিও বা ভিডিও যাই হোক এলিমেন্ট লাগবেই
+            document.getElementById("video-grid").appendChild(v);
         }
-        audio.srcObject = event.streams[0];
+        v.srcObject = event.streams[0];
     };
 
-    pc.onicecandidate = (e) => {
-        if (e.candidate) {
-            push(ref(db, `rooms/${currentRoom}/signals/${targetId}/${myId}/ice`), e.candidate.toJSON());
-        }
+    pc.onicecandidate = e => {
+        if (e.candidate) push(ref(db, `rooms/${currentRoom}/signals/${targetId}/${myId}/ice`), e.candidate.toJSON());
     };
 
     if (isCaller) {
@@ -152,68 +138,53 @@ async function setupPeer(targetId, isCaller) {
 }
 
 function listenForSignaling() {
-    onValue(ref(db, `rooms/${currentRoom}/signals`), (snapshot) => {
-        const signals = snapshot.val() || {};
-        for (let senderId in signals) {
-            if (senderId === myId) continue;
-            const myIncoming = signals[senderId][myId];
+    onValue(ref(db, `rooms/${currentRoom}/signals`), snap => {
+        const signals = snap.val() || {};
+        for (let sId in signals) {
+            if (sId === myId) continue;
+            const myIncoming = signals[sId][myId];
             if (!myIncoming) continue;
-
-            const pc = peers[senderId];
+            const pc = peers[sId];
             if (!pc) continue;
 
             if (myIncoming.offer && !pc.currentRemoteDescription) {
                 pc.setRemoteDescription(new RTCSessionDescription(myIncoming.offer)).then(async () => {
-                    const answer = await pc.createAnswer();
-                    await pc.setLocalDescription(answer);
-                    set(ref(db, `rooms/${currentRoom}/signals/${myId}/${senderId}/answer`), { sdp: answer.sdp, type: answer.type });
+                    const ans = await pc.createAnswer();
+                    await pc.setLocalDescription(ans);
+                    set(ref(db, `rooms/${currentRoom}/signals/${myId}/${sId}/answer`), { sdp: ans.sdp, type: ans.type });
                 });
             }
-
-            if (myIncoming.answer && !pc.currentRemoteDescription) {
-                pc.setRemoteDescription(new RTCSessionDescription(myIncoming.answer));
-            }
-
-            if (myIncoming.ice) {
-                Object.values(myIncoming.ice).forEach(cand => pc.addIceCandidate(new RTCIceCandidate(cand)).catch(()=>{}));
-            }
+            if (myIncoming.answer && !pc.currentRemoteDescription) pc.setRemoteDescription(new RTCSessionDescription(myIncoming.answer));
+            if (myIncoming.ice) Object.values(myIncoming.ice).forEach(c => pc.addIceCandidate(new RTCIceCandidate(c)).catch(()=>{}));
         }
     });
 }
 
-// --- Mic & Speaker Fixes ---
+// --- কন্ট্রোল ফাংশন ---
 window.toggleMute = () => {
-    const track = myStream.getAudioTracks()[0];
-    track.enabled = !track.enabled;
-    const btn = document.getElementById("muteBtn");
-    btn.innerText = track.enabled ? "🎤 Mic On" : "🔇 Mic Muted";
-    btn.style.background = track.enabled ? "#333" : "#f02849";
+    const t = myStream.getAudioTracks()[0];
+    t.enabled = !t.enabled;
+    document.getElementById("muteBtn").innerText = t.enabled ? "🎤 মাইক চালু" : "🔇 মাইক বন্ধ";
+    document.getElementById("muteBtn").classList.toggle("active-tool", !t.enabled);
+};
+
+window.toggleCamera = () => {
+    isCamOn = !isCamOn;
+    const t = myStream.getVideoTracks()[0];
+    t.enabled = isCamOn;
+    document.getElementById("localVideo").style.display = isCamOn ? "block" : "none";
+    document.getElementById("camBtn").innerText = isCamOn ? "📷 ক্যামেরা চালু" : "📷 ক্যামেরা বন্ধ";
+    document.getElementById("camBtn").classList.toggle("active-tool", isCamOn);
 };
 
 window.toggleSpeaker = () => {
-    isSpeakerOn = !isSpeakerOn;
-    const audios = document.querySelectorAll("audio");
-    audios.forEach(a => a.volume = isSpeakerOn ? 1.0 : 0.0);
-    
-    const btn = document.getElementById("speakerBtn");
-    btn.innerText = isSpeakerOn ? "🔊 Speaker On" : "🔈 Earpiece/Mute";
-    btn.style.background = isSpeakerOn ? "#333" : "#555";
+    const audios = document.querySelectorAll("video");
+    const isMuted = audios[0] && audios[0].muted;
+    audios.forEach(a => { if(a.id !== "localVideo") a.muted = !a.muted; a.volume = 1; });
+    document.getElementById("speakerBtn").innerText = isMuted ? "🔊 স্পিকার চালু" : "🔈 স্পিকার বন্ধ";
 };
 
-function renderUserList(users) {
-    const container = document.getElementById("users-container");
-    container.innerHTML = "";
-    Object.keys(users).forEach(id => {
-        const div = document.createElement("div");
-        div.className = "user-row";
-        div.innerHTML = `<span><span class="status-dot"></span>${id === myId ? "You (Me)" : "Stranger " + id.split('-')[1]}</span>`;
-        container.appendChild(div);
-    });
-}
-
-window.leaveRoom = () => {
-    location.reload();
-};
+window.leaveRoom = () => location.reload();
 </script>
 </body>
 </html>
