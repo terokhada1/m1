@@ -1,26 +1,24 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-<meta charset="UTF-8">
-<title>Audio Call</title>
+  <title>Audio Call</title>
 </head>
-
 <body>
-<h2>📞 Audio Call</h2>
+
+<h2>🎧 Audio Call</h2>
 
 <button onclick="startCall()">Call</button>
 <button onclick="endCall()">End</button>
 
 <br><br>
-<audio id="remoteAudio" autoplay></audio>
+<audio id="remoteAudio" autoplay playsinline></audio>
 
 <script type="module">
 
-// 🔥 Firebase Import
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
+import { getDatabase, ref, set, onValue, push, remove } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
-// 🔥 Firebase Config
+// 🔥 Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyDQDrOlYu4GFuba1v1PJGlyLSIEm6Li6No",
   authDomain: "bongocall-cad70.firebaseapp.com",
@@ -31,15 +29,12 @@ const firebaseConfig = {
   appId: "1:642949206020:web:7329857025880de0446551"
 };
 
-// 🔥 Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// 🌐 WebRTC
+// 🔊 WebRTC
 const peer = new RTCPeerConnection({
-  iceServers: [
-    { urls: "stun:stun.l.google.com:19302" }
-  ]
+  iceServers: [{ urls: "stun:stun.l.google.com:19302" }]
 });
 
 let localStream;
@@ -48,45 +43,56 @@ let localStream;
 window.startCall = async () => {
   localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
-  localStream.getTracks().forEach(track => {
-    peer.addTrack(track, localStream);
-  });
+  localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
 
   peer.ontrack = e => {
-    document.getElementById("remoteAudio").srcObject = e.streams[0];
+    const audio = document.getElementById("remoteAudio");
+    audio.srcObject = e.streams[0];
+    audio.play().catch(() => {});
+  };
+
+  peer.onicecandidate = e => {
+    if (e.candidate) {
+      push(ref(db, "call/candidates"), e.candidate);
+    }
   };
 
   const offer = await peer.createOffer();
   await peer.setLocalDescription(offer);
-
   set(ref(db, "call/offer"), offer);
 };
 
 // 📞 Receive Offer
-onValue(ref(db, "call/offer"), async (snapshot) => {
-  if (!snapshot.exists()) return;
+onValue(ref(db, "call/offer"), async snap => {
+  if (!snap.exists()) return;
 
-  await peer.setRemoteDescription(snapshot.val());
+  await peer.setRemoteDescription(snap.val());
+
   const answer = await peer.createAnswer();
   await peer.setLocalDescription(answer);
-
   set(ref(db, "call/answer"), answer);
 });
 
 // 📩 Receive Answer
-onValue(ref(db, "call/answer"), async (snapshot) => {
-  if (!snapshot.exists()) return;
-  await peer.setRemoteDescription(snapshot.val());
+onValue(ref(db, "call/answer"), async snap => {
+  if (!snap.exists()) return;
+  await peer.setRemoteDescription(snap.val());
 });
 
-// ❌ End Call
+// ❄ ICE candidates
+onValue(ref(db, "call/candidates"), snap => {
+  snap.forEach(child => {
+    peer.addIceCandidate(new RTCIceCandidate(child.val()));
+  });
+});
+
+// ❌ End call
 window.endCall = () => {
   peer.close();
   remove(ref(db, "call"));
-  alert("Call Ended");
+  alert("Call ended");
 };
 
 </script>
-
 </body>
 </html>
