@@ -3,27 +3,32 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>WhatsApp Style Audio Call</title>
+<title>Multi-User Video Call with User List</title>
 <style>
 body { font-family: sans-serif; text-align: center; padding: 20px; background: #e6ecf0; }
 h2 { font-size: 24px; margin-bottom: 15px; }
-button { padding: 15px 20px; margin: 10px; font-size: 18px; border-radius: 50%; border: none; cursor: pointer; box-shadow: 0 4px #999; }
+input { padding:8px; font-size:16px; margin:5px; }
+button { padding: 12px 18px; margin: 5px; font-size: 16px; border-radius: 10px; border: none; cursor: pointer; box-shadow: 0 4px #999; }
 button:active { box-shadow: 0 2px #666; transform: translateY(2px); }
 #incomingCall { display: none; background: #fff; padding: 20px; border-radius: 15px; margin-top: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
 #callControls { display: none; margin-top: 20px; }
-#callStatus, #callerInfo, #callTimer { font-size: 18px; margin-top: 10px; }
-audio { display: none; }
+#callStatus, #callTimer { font-size: 18px; margin-top: 10px; }
+video { border-radius: 10px; margin-top: 10px; max-width: 100%; }
+#localVideo { width: 120px; height: 160px; position: absolute; top: 20px; right: 20px; border: 2px solid #333; }
+#userList { margin-top: 20px; background: #fff; padding: 10px; border-radius: 10px; max-height:200px; overflow-y:auto; }
+.userItem { padding: 8px; border-bottom: 1px solid #ddd; cursor: pointer; }
+.userItem:hover { background: #f0f0f0; }
 </style>
 </head>
 <body>
 
-<h2>📞 Audio Call System</h2>
+<h2>📹 Multi-User Video Call</h2>
 
 <input type="text" id="username" placeholder="Enter Your Name">
-<br><br>
-
-<button onclick="startCall()">📱 Call</button>
-<button onclick="endCall()">❌ End</button>
+<br>
+<button onclick="registerUser()">✅ Go Online</button>
+<br>
+<div id="userList"></div>
 
 <div id="incomingCall">
   <h3>Incoming Call from <span id="incomingCaller">Unknown</span></h3>
@@ -33,21 +38,21 @@ audio { display: none; }
 
 <div id="callControls">
   <button id="muteBtn" onclick="toggleMute()">🎤 Mute</button>
+  <button id="videoBtn" onclick="toggleVideo()">📹 Video Off</button>
   <button id="speakerBtn" onclick="toggleSpeaker()">🔊 Speaker</button>
   <div id="callTimer">00:00</div>
 </div>
 
-<audio id="remoteAudio" autoplay playsinline></audio>
+<video id="remoteVideo" autoplay playsinline></video>
+<video id="localVideo" autoplay muted playsinline></video>
 <audio id="ringtone" src="https://actions.google.com/sounds/v1/alarms/phone_alerts_and_rings.ogg" loop></audio>
-
 <div id="callStatus">Call Status: None</div>
-<div id="callerInfo">Caller: None</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getDatabase, ref, set, onValue, push, remove } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
+import { getDatabase, ref, set, onValue, push, remove, onDisconnect } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
-// Firebase
+// Firebase Config
 const firebaseConfig = {
   apiKey: "AIzaSyDQDrOlYu4GFuba1v1PJGlyLSIEm6Li6No",
   authDomain: "bongocall-cad70.firebaseapp.com",
@@ -60,69 +65,110 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
+// User ID
+let userId = localStorage.getItem("userId");
+if(!userId){
+  userId = 'user-' + Math.floor(Math.random()*1000000);
+  localStorage.setItem("userId", userId);
+}
+
 // Variables
 let peer = null;
 let localStream = null;
+let callId = null;
 let isMuted = false;
+let isVideoOn = true;
 let isSpeakerOn = true;
 let callSeconds = 0;
 let timerInterval = null;
 
-// HTML Elements
-const remoteAudio = document.getElementById("remoteAudio");
+// Elements
+const remoteVideo = document.getElementById("remoteVideo");
+const localVideo = document.getElementById("localVideo");
 const ringtone = document.getElementById("ringtone");
+const userListDiv = document.getElementById("userList");
 
-// Update Call Status
-function updateStatus(status, callerName="") {
-  set(ref(db, "call/status"), status);
-  set(ref(db, "call/caller"), callerName);
-}
-
-// Call Timer
+// Timer
 function startTimer() {
   callSeconds = 0;
   document.getElementById("callTimer").innerText = "00:00";
-  timerInterval = setInterval(() => {
+  timerInterval = setInterval(()=>{
     callSeconds++;
     let m = String(Math.floor(callSeconds/60)).padStart(2,"0");
     let s = String(callSeconds%60).padStart(2,"0");
     document.getElementById("callTimer").innerText = `${m}:${s}`;
-  }, 1000);
+  },1000);
 }
-function stopTimer() { clearInterval(timerInterval); }
+function stopTimer(){ clearInterval(timerInterval); }
 
-// 🎤 Start Call
+// Request speaker permission
+async function requestSpeakerPermission() {
+  if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+    try{
+      const stream = await navigator.mediaDevices.getUserMedia({audio:true});
+      stream.getTracks().forEach(track => track.stop());
+    }catch(e){
+      alert("Microphone permission denied");
+    }
+  }
+}
+
+// Register User Online
+window.registerUser = () => {
+  const username = document.getElementById("username").value || "Unknown";
+  set(ref(db,"users/"+userId), { name:username, online:true });
+  onDisconnect(ref(db,"users/"+userId)).remove();
+
+  // Listen to all users
+  onValue(ref(db,"users"), snap=>{
+    const users = snap.val() || {};
+    userListDiv.innerHTML = '';
+    for(const id in users){
+      if(id===userId) continue;
+      const div = document.createElement("div");
+      div.className = "userItem";
+      div.textContent = users[id].name + " (" + id + ")";
+      div.onclick = ()=>document.getElementById("targetId").value = id;
+      userListDiv.appendChild(div);
+    }
+  });
+};
+
+// Start Call
 window.startCall = async () => {
   const username = document.getElementById("username").value || "Unknown";
-  localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  const targetId = document.getElementById("targetId")?.value;
+  if(!targetId){ alert("Click a user to call"); return; }
 
-  peer = new RTCPeerConnection({ iceServers: [{ urls: "stun:stun.l.google.com:19302" }] });
+  localStream = await navigator.mediaDevices.getUserMedia({ audio:true, video:true });
+  localVideo.srcObject = localStream;
+
+  callId = userId + "_" + targetId;
+
+  peer = new RTCPeerConnection({ iceServers:[{urls:"stun:stun.l.google.com:19302"}] });
   localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
 
-  peer.ontrack = e => { remoteAudio.srcObject = e.streams[0]; remoteAudio.play().catch(()=>{}); };
-  peer.onicecandidate = e => { if(e.candidate) push(ref(db,"call/candidates"), e.candidate); };
+  peer.ontrack = e => { remoteVideo.srcObject = e.streams[0]; };
+  peer.onicecandidate = e => { if(e.candidate) push(ref(db,"calls/"+callId+"/candidates"), e.candidate); };
 
   const offer = await peer.createOffer();
   await peer.setLocalDescription(offer);
-  set(ref(db,"call/offer"), offer);
-  updateStatus("calling", username);
+  set(ref(db,"calls/"+callId+"/offer"), { offer, callerId:userId, callerName:username, targetId });
+  set(ref(db,"calls/"+callId+"/status"), "calling");
+  document.getElementById("callStatus").innerText = "Calling "+targetId+"...";
 };
 
-// Incoming Call Listener
-onValue(ref(db,"call/status"), snap => {
-  const status = snap.val() || "None";
-  document.getElementById("callStatus").innerText = "Call Status: "+status;
-
-  if(status==="calling") {
-    onValue(ref(db,"call/caller"), callerSnap => {
-      const callerName = callerSnap.val() || "Unknown";
-      document.getElementById("incomingCaller").innerText = callerName;
-      document.getElementById("incomingCall").style.display = "block";
+// Listen for incoming calls
+onValue(ref(db,"calls"), snap=>{
+  const calls = snap.val() || {};
+  for(const key in calls){
+    const c = calls[key];
+    if(c.status==="calling" && c.targetId===userId){
+      document.getElementById("incomingCaller").textContent = c.callerName;
+      document.getElementById("incomingCall").style.display="block";
       ringtone.play().catch(()=>{});
-    });
-  } else {
-    document.getElementById("incomingCall").style.display = "none";
-    ringtone.pause(); ringtone.currentTime=0;
+      callId = key;
+    }
   }
 });
 
@@ -131,33 +177,35 @@ window.acceptCall = async () => {
   document.getElementById("incomingCall").style.display="none";
   ringtone.pause(); ringtone.currentTime=0;
 
-  localStream = await navigator.mediaDevices.getUserMedia({ audio:true });
+  localStream = await navigator.mediaDevices.getUserMedia({ audio:true, video:true });
+  localVideo.srcObject = localStream;
+
   peer = new RTCPeerConnection({ iceServers:[{urls:"stun:stun.l.google.com:19302"}] });
-  localStream.getTracks().forEach(track=>peer.addTrack(track,localStream));
+  localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
 
-  peer.ontrack = e => { remoteAudio.srcObject=e.streams[0]; remoteAudio.play().catch(()=>{}); };
-  peer.onicecandidate = e => { if(e.candidate) push(ref(db,"call/candidates"), e.candidate); };
+  peer.ontrack = e => { remoteVideo.srcObject = e.streams[0]; };
+  peer.onicecandidate = e => { if(e.candidate) push(ref(db,"calls/"+callId+"/candidates"), e.candidate); };
 
-  // Set remote offer
-  onValue(ref(db,"call/offer"), async snap=>{
-    if(!snap.exists()) return;
-    await peer.setRemoteDescription(snap.val());
+  onValue(ref(db,"calls/"+callId+"/offer"), async snap=>{
+    const offerData = snap.val();
+    if(!offerData) return;
+    await peer.setRemoteDescription(offerData.offer);
     const answer = await peer.createAnswer();
     await peer.setLocalDescription(answer);
-    set(ref(db,"call/answer"), answer);
-    updateStatus("in-call");
+    set(ref(db,"calls/"+callId+"/answer"), { answer, targetId:userId });
+    set(ref(db,"calls/"+callId+"/status"), "in-call");
     document.getElementById("callControls").style.display="block";
     startTimer();
   });
 
-  onValue(ref(db,"call/candidates"), snap=>{
-    snap.forEach(child=>peer.addIceCandidate(new RTCIceCandidate(child.val())));
+  onValue(ref(db,"calls/"+callId+"/candidates"), snap=>{
+    snap.forEach(child => peer.addIceCandidate(new RTCIceCandidate(child.val())));
   });
 };
 
 // Reject Call
 window.rejectCall = () => {
-  remove(ref(db,"call"));
+  if(callId) remove(ref(db,"calls/"+callId));
   document.getElementById("incomingCall").style.display="none";
   ringtone.pause(); ringtone.currentTime=0;
   alert("Call Rejected");
@@ -166,15 +214,14 @@ window.rejectCall = () => {
 // End Call
 window.endCall = () => {
   if(peer) peer.close();
-  remove(ref(db,"call"));
+  if(callId) remove(ref(db,"calls/"+callId));
   stopTimer();
   document.getElementById("callStatus").innerText="Call Status: Ended";
-  document.getElementById("callerInfo").innerText="Caller: None";
   document.getElementById("callControls").style.display="none";
   alert("Call Ended");
 };
 
-// Mute / Unmute
+// Mute
 window.toggleMute = () => {
   if(!localStream) return;
   localStream.getAudioTracks().forEach(track=>track.enabled=isMuted);
@@ -182,13 +229,25 @@ window.toggleMute = () => {
   document.getElementById("muteBtn").innerText = isMuted?"🎤 Unmute":"🎤 Mute";
 };
 
-// Speaker Toggle
-window.toggleSpeaker = () => {
-  isSpeakerOn = !isSpeakerOn;
-  remoteAudio.volume = isSpeakerOn?1:0;
-  document.getElementById("speakerBtn").innerText = isSpeakerOn?"🔊 Speaker":"🔇 Speaker";
+// Video
+window.toggleVideo = () => {
+  if(!localStream) return;
+  localStream.getVideoTracks().forEach(track=>track.enabled=isVideoOn);
+  isVideoOn = !isVideoOn;
+  document.getElementById("videoBtn").innerText = isVideoOn?"📹 Video Off":"📹 Video On";
 };
 
+// Speaker
+window.toggleSpeaker = async () => {
+  isSpeakerOn = !isSpeakerOn;
+  if(isSpeakerOn){ await requestSpeakerPermission(); remoteVideo.volume=1; }
+  else remoteVideo.volume=0;
+  document.getElementById("speakerBtn").innerText = isSpeakerOn?"🔊 Speaker":"🔇 Speaker";
+};
 </script>
+
+<!-- Hidden Target ID input -->
+<input type="hidden" id="targetId">
+
 </body>
 </html>
