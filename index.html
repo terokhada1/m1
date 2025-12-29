@@ -1,201 +1,238 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Multi-User Video Call</title>
-<style>
-body { font-family: sans-serif; text-align: center; padding: 20px; background: #e6ecf0; }
-h2 { font-size: 24px; margin-bottom: 15px; }
-input { padding:8px; font-size:16px; margin:5px; }
-button { padding: 12px 18px; margin: 5px; font-size: 16px; border-radius: 10px; border: none; cursor: pointer; box-shadow: 0 4px #999; }
-button:active { box-shadow: 0 2px #666; transform: translateY(2px); }
-#incomingCall { display: none; background: #fff; padding: 20px; border-radius: 15px; margin-top: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
-#callControls { display: none; margin-top: 20px; }
-#callStatus, #callTimer { font-size: 18px; margin-top: 10px; }
-video { border-radius: 10px; margin-top: 10px; max-width: 100%; }
-#localVideo { width: 120px; height: 160px; position: absolute; top: 20px; right: 20px; border: 2px solid #333; }
-#userList { margin-top: 20px; background: #fff; padding: 10px; border-radius: 10px; max-height:200px; overflow-y:auto; }
-.userItem { padding: 8px; border-bottom: 1px solid #ddd; cursor: default; display: flex; justify-content: space-between; align-items: center;}
-.userItem button { padding: 5px 10px; font-size:14px;}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Omegle Clone - Video & Chat</title>
+    <style>
+        body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .container { width: 100%; max-width: 900px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        
+        /* Video Styling */
+        #video-container { display: flex; gap: 10px; margin-bottom: 20px; position: relative; background: #000; border-radius: 8px; overflow: hidden; min-height: 300px; }
+        video { flex: 1; width: 50%; background: #222; object-fit: cover; }
+        #localVideo { width: 150px; height: 110px; position: absolute; bottom: 10px; right: 10px; border: 2px solid #fff; border-radius: 4px; z-index: 10; }
+        
+        /* Chat Styling */
+        #chatSection { display: none; border: 1px solid #ddd; border-radius: 8px; flex-direction: column; height: 300px; }
+        #messages { flex-grow: 1; padding: 15px; overflow-y: auto; background: #fff; display: flex; flex-direction: column; gap: 8px; }
+        .msg { margin: 0; padding: 5px 10px; border-radius: 5px; max-width: 80%; }
+        .you { align-self: flex-end; background: #0084ff; color: white; }
+        .stranger { align-self: flex-start; background: #e4e6eb; color: black; }
+        
+        .chat-input-area { display: flex; padding: 10px; border-top: 1px solid #ddd; }
+        input[type="text"] { flex-grow: 1; padding: 10px; border: 1px solid #ccc; border-radius: 20px; outline: none; }
+        
+        /* Controls */
+        .controls { margin-top: 15px; display: flex; gap: 10px; justify-content: center; }
+        button { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        .btn-start { background: #31a24c; color: white; font-size: 1.1em; }
+        .btn-next { background: #f02849; color: white; }
+        .btn-action { background: #e4e6eb; color: #050505; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        
+        #callStatus { margin: 10px 0; font-weight: bold; color: #65676b; }
+    </style>
 </head>
 <body>
 
-<h2>📹 Multi-User Video Call</h2>
+<div class="container">
+    <h2 style="color: #0084ff;">Stranger Video Chat</h2>
+    
+    <div id="callStatus">Status: Ready to connect</div>
 
-<input type="text" id="username" placeholder="Enter Your Name">
-<br>
-<button onclick="registerUser()">✅ Go Online</button>
+    <div id="video-container">
+        <video id="remoteVideo" autoplay playsinline></video>
+        <video id="localVideo" autoplay muted playsinline></video>
+    </div>
 
-<div id="userList"></div>
+    <div id="chatSection">
+        <div id="messages"></div>
+        <div class="chat-input-area">
+            <input type="text" id="chatInput" placeholder="Type a message...">
+            <button class="btn-action" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
 
-<div id="incomingCall">
-  <h3>Incoming Call from <span id="incomingCaller">Unknown</span></h3>
-  <button id="joinCallBtn" onclick="acceptCall()">✅ Join Call</button>
-  <button onclick="rejectCall()">❌ Reject</button>
+    <div class="controls">
+        <button id="startBtn" class="btn-start" onclick="startOmegle()">Find Stranger</button>
+        <div id="activeControls" style="display:none; gap:10px;">
+            <button class="btn-next" onclick="nextStranger()">Next Stranger</button>
+            <button class="btn-action" id="muteBtn" onclick="toggleMute()">Mute</button>
+            <button class="btn-action" id="videoBtn" onclick="toggleVideo()">Video Off</button>
+        </div>
+    </div>
 </div>
-
-<div id="callControls">
-  <button id="muteBtn" onclick="toggleMute()">🎤 Mute</button>
-  <button id="videoBtn" onclick="toggleVideo()">📹 Video Off</button>
-  <button id="speakerBtn" onclick="toggleSpeaker()">🔊 Speaker</button>
-  <div id="callTimer">00:00</div>
-  <button onclick="endCall()">❌ End Call</button>
-</div>
-
-<video id="remoteVideo" autoplay playsinline></video>
-<video id="localVideo" autoplay muted playsinline></video>
-<audio id="ringtone" src="https://actions.google.com/sounds/v1/alarms/phone_alerts_and_rings.ogg" loop></audio>
-<div id="callStatus">Call Status: None</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-app.js";
-import { getDatabase, ref, set, onValue, remove, onDisconnect, push } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
+import { getDatabase, ref, set, onValue, remove, onDisconnect, push, get, update } from "https://www.gstatic.com/firebasejs/12.7.0/firebase-database.js";
 
-// Firebase Config
+// --- PASTE YOUR FIREBASE CONFIG HERE ---
 const firebaseConfig = {
-  apiKey: "AIzaSyDQDrOlYu4GFuba1v1PJGlyLSIEm6Li6No",
-  authDomain: "bongocall-cad70.firebaseapp.com",
-  databaseURL: "https://bongocall-cad70-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "bongocall-cad70",
-  storageBucket: "bongocall-cad70.firebasestorage.app",
-  messagingSenderId: "642949206020",
-  appId: "1:642949206020:web:7329857025880de0446551"
+    apiKey: "AIzaSyDQDrOlYu4GFuba1v1PJGlyLSIEm6Li6No",
+    authDomain: "bongocall-cad70.firebaseapp.com",
+    databaseURL: "https://bongocall-cad70-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "bongocall-cad70",
+    storageBucket: "bongocall-cad70.firebasestorage.app",
+    messagingSenderId: "642949206020",
+    appId: "1:642949206020:web:7329857025880de0446551"
 };
+
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-// User ID
-let userId = localStorage.getItem("userId");
-if(!userId){
-  userId = 'user-' + Math.floor(Math.random()*1000000);
-  localStorage.setItem("userId", userId);
+let userId = 'user-' + Math.floor(Math.random() * 1000000);
+let peer, localStream, currentCallId, isSearching = false;
+const servers = { iceServers: [{ urls: ["stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19302"] }] };
+
+const statusEl = document.getElementById("callStatus");
+const messagesDiv = document.getElementById("messages");
+const chatInput = document.getElementById("chatInput");
+
+// Allow "Enter" key to send messages
+chatInput.addEventListener("keypress", (e) => { if (e.key === "Enter") sendMessage(); });
+
+
+
+// --- 1. Matching Logic ---
+window.startOmegle = async () => {
+    if(isSearching) return;
+    isSearching = true;
+    statusEl.innerText = "Searching for a stranger...";
+    document.getElementById("startBtn").style.display = 'none';
+    document.getElementById("activeControls").style.display = 'flex';
+
+    try {
+        if(!localStream) {
+            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            document.getElementById("localVideo").srcObject = localStream;
+        }
+    } catch (e) {
+        statusEl.innerText = "Camera/Mic access denied!";
+        return;
+    }
+
+    const queueRef = ref(db, "queue");
+    const snapshot = await get(queueRef);
+    const queue = snapshot.val();
+
+    if (queue) {
+        const strangerId = Object.keys(queue)[0];
+        await remove(ref(db, `queue/${strangerId}`));
+        initiateCall(strangerId);
+    } else {
+        set(ref(db, `queue/${userId}`), { id: userId });
+        onDisconnect(ref(db, `queue/${userId}`)).remove();
+        listenForIncomingMatch();
+    }
+};
+
+// --- 2. Signaling ---
+async function initiateCall(targetId) {
+    currentCallId = `${userId}_${targetId}`;
+    await setupPeer(targetId);
+
+    const offer = await peer.createOffer();
+    await peer.setLocalDescription(offer);
+
+    set(ref(db, `calls/${currentCallId}`), {
+        offer: { type: offer.type, sdp: offer.sdp },
+        callerId: userId,
+        targetId: targetId
+    });
+
+    onValue(ref(db, `calls/${currentCallId}/answer`), async snap => {
+        const data = snap.val();
+        if (data && !peer.currentRemoteDescription) {
+            await peer.setRemoteDescription(new RTCSessionDescription(data));
+            startChatSession();
+        }
+    });
 }
 
-// Variables
-let peer=null, localStream=null, callId=null;
-let isMuted=false, isVideoOn=true, isSpeakerOn=true, callSeconds=0, timerInterval=null;
-
-// Elements
-const remoteVideo = document.getElementById("remoteVideo");
-const localVideo = document.getElementById("localVideo");
-const ringtone = document.getElementById("ringtone");
-const userListDiv = document.getElementById("userList");
-
-// Timer
-function startTimer() {
-  callSeconds = 0;
-  document.getElementById("callTimer").innerText="00:00";
-  timerInterval = setInterval(()=>{
-    callSeconds++;
-    let m = String(Math.floor(callSeconds/60)).padStart(2,"0");
-    let s = String(callSeconds%60).padStart(2,"0");
-    document.getElementById("callTimer").innerText=`${m}:${s}`;
-  },1000);
+function listenForIncomingMatch() {
+    onValue(ref(db, "calls"), async snap => {
+        const calls = snap.val();
+        for (let id in calls) {
+            if (calls[id].targetId === userId && !calls[id].answer) {
+                currentCallId = id;
+                await setupPeer(calls[id].callerId);
+                await peer.setRemoteDescription(new RTCSessionDescription(calls[id].offer));
+                const answer = await peer.createAnswer();
+                await peer.setLocalDescription(answer);
+                update(ref(db, `calls/${currentCallId}`), { answer: { type: answer.type, sdp: answer.sdp } });
+                startChatSession();
+            }
+        }
+    });
 }
-function stopTimer(){ clearInterval(timerInterval); }
 
-// Register User
-window.registerUser = ()=>{
-  const name=document.getElementById("username").value||"Unknown";
-  set(ref(db,"users/"+userId),{name,online:true});
-  onDisconnect(ref(db,"users/"+userId)).remove();
+// --- 3. Peer Configuration ---
+async function setupPeer(remoteId) {
+    peer = new RTCPeerConnection(servers);
+    localStream.getTracks().forEach(track => peer.addTrack(track, localStream));
+    
+    peer.ontrack = e => {
+        document.getElementById("remoteVideo").srcObject = e.streams[0];
+        statusEl.innerText = "Connected to Stranger";
+    };
 
-  // Show online users
-  onValue(ref(db,"users"), snap=>{
-    const users = snap.val()||{};
-    userListDiv.innerHTML='';
-    for(const id in users){
-      if(id===userId) continue;
-      const div = document.createElement("div");
-      div.className="userItem";
-      div.innerHTML = `<span>${users[id].name} (${id})</span> <button onclick="startCallTo('${id}')">📞 Call</button>`;
-      userListDiv.appendChild(div);
+    peer.onicecandidate = e => {
+        if (e.candidate) push(ref(db, `calls/${currentCallId}/candidates/${userId}`), e.candidate.toJSON());
+    };
+
+    onValue(ref(db, `calls/${currentCallId}/candidates/${remoteId}`), snap => {
+        snap.forEach(child => peer.addIceCandidate(new RTCIceCandidate(child.val())).catch(()=>{}));
+    });
+}
+
+// --- 4. Chat Logic ---
+function startChatSession() {
+    document.getElementById("chatSection").style.display = 'flex';
+    onValue(ref(db, `calls/${currentCallId}/chat`), snap => {
+        messagesDiv.innerHTML = '';
+        snap.forEach(child => {
+            const msg = child.val();
+            const type = msg.sender === userId ? 'you' : 'stranger';
+            messagesDiv.innerHTML += `<p class="msg ${type}">${msg.text}</p>`;
+        });
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    });
+}
+
+window.sendMessage = () => {
+    const text = chatInput.value.trim();
+    if (text && currentCallId) {
+        push(ref(db, `calls/${currentCallId}/chat`), { sender: userId, text: text });
+        chatInput.value = '';
     }
-  });
 };
 
-// Start call to a user
-window.startCallTo = async (targetId)=>{
-  const name=document.getElementById("username").value||"Unknown";
-  localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
-  localVideo.srcObject=localStream;
-
-  callId=userId+"_"+targetId;
-  peer=new RTCPeerConnection({iceServers:[{urls:"stun:stun.l.google.com:19302"}]});
-  localStream.getTracks().forEach(track=>peer.addTrack(track,localStream));
-
-  peer.ontrack=e=>remoteVideo.srcObject=e.streams[0];
-  peer.onicecandidate=e=>{ if(e.candidate) push(ref(db,"calls/"+callId+"/candidates"),e.candidate); };
-
-  const offer=await peer.createOffer();
-  await peer.setLocalDescription(offer);
-  set(ref(db,"calls/"+callId+"/offer"),{offer,callerId:userId,callerName:name,targetId});
-  set(ref(db,"calls/"+callId+"/status"),"calling");
-  document.getElementById("callStatus").innerText="Calling "+targetId;
+// --- 5. Clean up & Reset ---
+window.nextStranger = () => {
+    if (peer) peer.close();
+    if (currentCallId) remove(ref(db, `calls/${currentCallId}`));
+    remove(ref(db, `queue/${userId}`));
+    
+    document.getElementById("remoteVideo").srcObject = null;
+    document.getElementById("chatSection").style.display = 'none';
+    messagesDiv.innerHTML = '';
+    isSearching = false;
+    startOmegle();
 };
 
-// Incoming call listener
-onValue(ref(db,"calls"), snap=>{
-  const calls = snap.val()||{};
-  for(const key in calls){
-    const c=calls[key];
-    if(c.status==="calling" && c.targetId===userId){
-      document.getElementById("incomingCaller").textContent=c.callerName;
-      document.getElementById("incomingCall").style.display="block";
-      ringtone.play().catch(()=>{});
-      callId=key;
-    }
-  }
-});
-
-// Accept call
-window.acceptCall=async ()=>{
-  document.getElementById("incomingCall").style.display="none";
-  ringtone.pause(); ringtone.currentTime=0;
-
-  localStream=await navigator.mediaDevices.getUserMedia({audio:true,video:true});
-  localVideo.srcObject=localStream;
-
-  peer=new RTCPeerConnection({iceServers:[{urls:"stun:stun.l.google.com:19302"}]});
-  localStream.getTracks().forEach(track=>peer.addTrack(track,localStream));
-
-  peer.ontrack=e=>remoteVideo.srcObject=e.streams[0];
-  peer.onicecandidate=e=>{ if(e.candidate) push(ref(db,"calls/"+callId+"/candidates"),e.candidate); };
-
-  onValue(ref(db,"calls/"+callId+"/offer"), async snap=>{
-    const data=snap.val();
-    if(!data) return;
-    await peer.setRemoteDescription(data.offer);
-    const answer=await peer.createAnswer();
-    await peer.setLocalDescription(answer);
-    set(ref(db,"calls/"+callId+"/answer"),{answer,targetId:userId});
-    set(ref(db,"calls/"+callId+"/status"),"in-call");
-    document.getElementById("callControls").style.display="block";
-    startTimer();
-  });
-
-  onValue(ref(db,"calls/"+callId+"/candidates"), snap=>{
-    snap.forEach(child=>peer.addIceCandidate(new RTCIceCandidate(child.val())));
-  });
+window.toggleMute = () => {
+    const audioTrack = localStream.getAudioTracks()[0];
+    audioTrack.enabled = !audioTrack.enabled;
+    document.getElementById("muteBtn").innerText = audioTrack.enabled ? "Mute" : "Unmute";
 };
 
-// Reject call
-window.rejectCall=()=>{ if(callId) remove(ref(db,"calls/"+callId)); document.getElementById("incomingCall").style.display="none"; ringtone.pause(); ringtone.currentTime=0; alert("Call Rejected"); };
-
-// End call
-window.endCall=()=>{ if(peer) peer.close(); if(callId) remove(ref(db,"calls/"+callId)); stopTimer(); document.getElementById("callControls").style.display="none"; document.getElementById("callStatus").innerText="Call Ended"; };
-
-// Mute
-window.toggleMute=()=>{ if(!localStream) return; localStream.getAudioTracks().forEach(track=>track.enabled=isMuted); isMuted=!isMuted; document.getElementById("muteBtn").innerText=isMuted?"🎤 Unmute":"🎤 Mute"; };
-
-// Video toggle
-window.toggleVideo=()=>{ if(!localStream) return; localStream.getVideoTracks().forEach(track=>track.enabled=isVideoOn); isVideoOn=!isVideoOn; document.getElementById("videoBtn").innerText=isVideoOn?"📹 Video Off":"📹 Video On"; };
-
-// Speaker toggle
-window.toggleSpeaker=()=>{ isSpeakerOn=!isSpeakerOn; remoteVideo.volume=isSpeakerOn?1:0; document.getElementById("speakerBtn").innerText=isSpeakerOn?"🔊 Speaker":"🔇 Speaker"; };
-
+window.toggleVideo = () => {
+    const videoTrack = localStream.getVideoTracks()[0];
+    videoTrack.enabled = !videoTrack.enabled;
+    document.getElementById("videoBtn").innerText = videoTrack.enabled ? "Video Off" : "Video On";
+};
 </script>
 </body>
 </html>
