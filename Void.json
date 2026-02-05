@@ -1,0 +1,20 @@
+{
+  "View_no": "1",
+  "Group_1": {
+    "Floor_1": {
+      "Room_1": "a",
+      "Room_2": "b",
+      "Room_3": "c"
+    },
+    "Floor_2": {
+      "Room_1": "a",
+      "Room_2": "a",
+      "Room_3": "a"
+    },
+    "Floor_3": {
+      "Room_1": "b",
+      "Room_2": "b",
+      "Room_3": "b"
+    }
+  }
+}
